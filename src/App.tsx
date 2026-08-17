@@ -16,7 +16,7 @@ import { KanshanMascot } from "./components/KanshanMascot";
 import { LabTimeline } from "./components/LabTimeline";
 import { ScoreMeter } from "./components/ScoreMeter";
 import { EvidenceCard } from "./components/EvidenceCard";
-import { labSteps } from "./data/demoCases";
+import { createLabSteps } from "./data/demoCases";
 import type { AntiRollReport, StageId } from "./types";
 
 const examples = [
@@ -24,6 +24,8 @@ const examples = [
   "我每天写公众号，但是没人看",
   "我投了200份简历，为什么没有面试？",
 ];
+
+const labSteps = createLabSteps(isLiveZhihuConfigured);
 
 export default function App() {
   const [stage, setStage] = useState<StageId>("home");

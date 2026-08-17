@@ -48,25 +48,29 @@ export const demoEvidence: ZhihuEvidence[] = [
   },
 ];
 
-export const labSteps = [
-  {
-    title: "拆解努力样本",
-    detail: "识别投入方式、目标对象和可观测结果。",
-  },
-  {
-    title: "检索知乎相似经历",
-    detail: "用 Mock 知乎案例库模拟搜索成功与失败样本。",
-  },
-  {
-    title: "抽取关键证据",
-    detail: "标记时间投入、反馈信号、方向调整和最终结果。",
-  },
-  {
-    title: "聚类成功路径",
-    detail: "比较高增长样本的共同动作和低收益样本的共同盲区。",
-  },
-  {
-    title: "生成反卷报告",
-    detail: "把无效加量改写成一周可验证的小实验。",
-  },
-];
+export function createLabSteps(isLiveData: boolean) {
+  return [
+    {
+      title: "拆解努力样本",
+      detail: "识别投入方式、目标对象和可观测结果。",
+    },
+    {
+      title: "检索知乎相似经历",
+      detail: isLiveData
+        ? "调用知乎开放平台，检索与当前问题相关的真实经历。"
+        : "用 Mock 知乎案例库模拟搜索成功与失败样本。",
+    },
+    {
+      title: "抽取关键证据",
+      detail: "标记时间投入、反馈信号、方向调整和最终结果。",
+    },
+    {
+      title: "聚类成功路径",
+      detail: "比较高增长样本的共同动作和低收益样本的共同盲区。",
+    },
+    {
+      title: "生成反卷报告",
+      detail: "把无效加量改写成一周可验证的小实验。",
+    },
+  ];
+}
