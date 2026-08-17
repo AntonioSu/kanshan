@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "build:vercel": "VITE_ZHIHU_API_URL=/api/zhihu-search npm run build",
+    "build:vercel": "VITE_ZHIHU_API_URL=/api/zhihu-search VITE_ZHIHU_PROFILE_API_URL=/api/zhihu-profile npm run build",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },

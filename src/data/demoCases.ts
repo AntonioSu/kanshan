@@ -74,3 +74,30 @@ export function createLabSteps(isLiveData: boolean) {
     },
   ];
 }
+
+export function createProfileLabSteps(isLiveData: boolean) {
+  return [
+    {
+      title: "验证授权主页",
+      detail: "确认主页格式，并限定为当前已授权的知乎账号。",
+    },
+    {
+      title: "获取公开创作",
+      detail: isLiveData
+        ? "调用知乎用户内容 API，同时获取近期与高赞内容。"
+        : "读取主页分析演示样本。",
+    },
+    {
+      title: "计算内容结构",
+      detail: "统计回答、文章、想法等内容占比与发布节奏。",
+    },
+    {
+      title: "聚类主题与反馈",
+      detail: "识别稳定主题、代表作及赞同、评论、收藏表现。",
+    },
+    {
+      title: "生成创作者简报",
+      detail: "总结表达风格、优势、风险与下一轮内容实验。",
+    },
+  ];
+}

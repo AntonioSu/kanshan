@@ -105,6 +105,7 @@ export async function analyzeEffortPainPoint(
   const antiRollScore = Math.round((directionScore + feedbackScore + 100 - Math.abs(effortScore - 72)) / 3);
 
   return {
+    kind: "effort",
     query,
     dataSource: provider.source,
     objectType,

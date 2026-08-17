@@ -6,18 +6,25 @@ import {
   BarChart3,
   BrainCircuit,
   ClipboardList,
+  FileSearch,
   FlaskConical,
+  Link2,
+  MessageSquareText,
   Play,
   Search,
+  ShieldCheck,
   Sparkles,
+  User,
 } from "lucide-react";
+import { analyzeZhihuProfile, isLiveZhihuProfileConfigured, parseZhihuProfileUrl } from "./api/profile";
 import { analyzeEffortPainPoint, isLiveZhihuConfigured } from "./api/zhihu";
+import { EvidenceCard } from "./components/EvidenceCard";
 import { KanshanMascot } from "./components/KanshanMascot";
 import { LabTimeline } from "./components/LabTimeline";
+import { ProfileReportView } from "./components/ProfileReportView";
 import { ScoreMeter } from "./components/ScoreMeter";
-import { EvidenceCard } from "./components/EvidenceCard";
-import { createLabSteps } from "./data/demoCases";
-import type { AntiRollReport, StageId } from "./types";
+import { createLabSteps, createProfileLabSteps } from "./data/demoCases";
+import type { AnalysisMode, AnalysisReport, StageId } from "./types";
 
 const examples = [
   "我每天学习10小时，为什么还是没进步？",
@@ -25,17 +32,22 @@ const examples = [
   "我投了200份简历，为什么没有面试？",
 ];
 
-const labSteps = createLabSteps(isLiveZhihuConfigured);
+const effortLabSteps = createLabSteps(isLiveZhihuConfigured);
+const profileLabSteps = createProfileLabSteps(isLiveZhihuProfileConfigured);
 
 export default function App() {
   const [stage, setStage] = useState<StageId>("home");
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("effort");
   const [query, setQuery] = useState(examples[0]);
+  const [profileUrl, setProfileUrl] = useState("");
   const [activeStep, setActiveStep] = useState(0);
-  const [report, setReport] = useState<AntiRollReport | null>(null);
+  const [report, setReport] = useState<AnalysisReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [homeError, setHomeError] = useState("");
 
   const stageIndex = useMemo(() => ["home", "lab", "report"].indexOf(stage), [stage]);
+  const activeLabSteps = analysisMode === "profile" ? profileLabSteps : effortLabSteps;
 
   useEffect(() => {
     if (stage !== "lab") {
@@ -48,7 +60,10 @@ export default function App() {
     setAnalysisError("");
 
     let isCancelled = false;
-    analyzeEffortPainPoint(query)
+    const analysis =
+      analysisMode === "profile" ? analyzeZhihuProfile(profileUrl) : analyzeEffortPainPoint(query);
+
+    analysis
       .then((nextReport) => {
         if (!isCancelled) {
           setReport(nextReport);
@@ -62,7 +77,7 @@ export default function App() {
 
     const timer = window.setInterval(() => {
       setActiveStep((current) => {
-        if (current >= labSteps.length) {
+        if (current >= activeLabSteps.length) {
           window.clearInterval(timer);
           setIsAnalyzing(false);
           return current;
@@ -75,10 +90,30 @@ export default function App() {
       isCancelled = true;
       window.clearInterval(timer);
     };
-  }, [query, stage]);
+  }, [activeLabSteps.length, analysisMode, profileUrl, query, stage]);
 
-  function startLab(nextQuery = query) {
+  function selectMode(nextMode: AnalysisMode) {
+    setAnalysisMode(nextMode);
+    setStage("home");
+    setReport(null);
+    setAnalysisError("");
+    setHomeError("");
+  }
+
+  function startEffortLab(nextQuery = query) {
+    setAnalysisMode("effort");
     setQuery(nextQuery);
+    setHomeError("");
+    setStage("lab");
+  }
+
+  function startProfileLab() {
+    if (!parseZhihuProfileUrl(profileUrl)) {
+      setHomeError("请输入完整的知乎个人主页链接，例如 https://www.zhihu.com/people/username");
+      return;
+    }
+
+    setHomeError("");
     setStage("lab");
   }
 
@@ -128,52 +163,121 @@ export default function App() {
         <section className="hero-section">
           <div className="hero-copy">
             <div className="eyebrow">
-              <BrainCircuit size={18} />
-              {isLiveZhihuConfigured ? "真实知乎案例分析 Agent" : "知乎案例演示 Agent"}
+              {analysisMode === "profile" ? <User size={18} /> : <BrainCircuit size={18} />}
+              {analysisMode === "profile"
+                ? isLiveZhihuProfileConfigured
+                  ? "真实知乎创作者分析 Agent"
+                  : "知乎主页分析演示 Agent"
+                : isLiveZhihuConfigured
+                  ? "真实知乎案例分析 Agent"
+                  : "知乎案例演示 Agent"}
             </div>
-            <h1>找出你的无效努力</h1>
+            <h1>{analysisMode === "profile" ? "读懂你的知乎内容" : "找出你的无效努力"}</h1>
             <p>
-              输入一句努力困惑，看山会把它拆成实验样本，检索相似经历，并生成一份能行动的反卷报告。
+              {analysisMode === "profile"
+                ? "汇总授权账号的公开创作，识别主题、内容结构、互动表现与下一步增长机会。"
+                : "输入一句努力困惑，看山会把它拆成实验样本，检索相似经历，并生成一份能行动的反卷报告。"}
             </p>
             <div className="query-panel">
-              <label htmlFor="effort-query">努力样本</label>
-              <textarea
-                id="effort-query"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                rows={4}
-              />
+              <div className="analysis-mode-toggle" aria-label="选择分析模式">
+                <button
+                  className={analysisMode === "effort" ? "is-selected" : ""}
+                  onClick={() => selectMode("effort")}
+                  type="button"
+                >
+                  <MessageSquareText size={17} />
+                  问题分析
+                </button>
+                <button
+                  className={analysisMode === "profile" ? "is-selected" : ""}
+                  onClick={() => selectMode("profile")}
+                  type="button"
+                >
+                  <FileSearch size={17} />
+                  主页分析
+                </button>
+              </div>
+
+              {analysisMode === "effort" ? (
+                <>
+                  <label htmlFor="effort-query">努力样本</label>
+                  <textarea
+                    id="effort-query"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    rows={4}
+                  />
+                </>
+              ) : (
+                <>
+                  <label htmlFor="profile-url">当前已授权账号的知乎主页</label>
+                  <div className="url-input-wrap">
+                    <Link2 size={18} />
+                    <input
+                      id="profile-url"
+                      inputMode="url"
+                      onChange={(event) => {
+                        setProfileUrl(event.target.value);
+                        setHomeError("");
+                      }}
+                      placeholder="https://www.zhihu.com/people/username"
+                      type="url"
+                      value={profileUrl}
+                    />
+                  </div>
+                  <div className="profile-auth-note">
+                    <ShieldCheck size={17} />
+                    <span>当前支持 Access Secret 所属账号；其他用户需完成知乎 OAuth 授权。</span>
+                  </div>
+                  {homeError && <p className="form-error">{homeError}</p>}
+                </>
+              )}
+
               <div className="query-panel__actions">
-                <button className="primary-button" onClick={() => startLab()} type="button">
+                <button
+                  className="primary-button"
+                  onClick={analysisMode === "profile" ? startProfileLab : () => startEffortLab()}
+                  type="button"
+                >
                   <Play size={18} />
-                  开始实验
+                  {analysisMode === "profile" ? "分析主页" : "开始实验"}
                 </button>
-                <button className="ghost-button" onClick={() => setQuery(examples[1])} type="button">
-                  换个样本
-                </button>
+                {analysisMode === "effort" && (
+                  <button className="ghost-button" onClick={() => setQuery(examples[1])} type="button">
+                    换个样本
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="hero-lab" aria-label="看山实验台">
+          <div className={`hero-lab ${analysisMode === "profile" ? "hero-lab--profile" : ""}`} aria-label="看山实验台">
             <KanshanMascot />
             <div className="lab-glass">
-              <span>努力指数</span>
-              <strong>86</strong>
+              <span>{analysisMode === "profile" ? "分析维度" : "努力指数"}</span>
+              <strong>{analysisMode === "profile" ? "8" : "86"}</strong>
             </div>
             <div className="lab-note">
               <Search size={18} />
-              正在等待样本
+              {analysisMode === "profile" ? "等待授权主页" : "正在等待样本"}
             </div>
           </div>
 
-          <div className="example-strip" aria-label="示例问题">
-            {examples.map((example) => (
-              <button key={example} onClick={() => startLab(example)} type="button">
-                {example}
-              </button>
-            ))}
-          </div>
+          {analysisMode === "effort" ? (
+            <div className="example-strip" aria-label="示例问题">
+              {examples.map((example) => (
+                <button key={example} onClick={() => startEffortLab(example)} type="button">
+                  {example}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="profile-scope-strip" aria-label="主页分析范围">
+              <span><strong>50</strong>近期内容</span>
+              <span><strong>20</strong>高赞内容</span>
+              <span><strong>8</strong>分析维度</span>
+            </div>
+          )}
         </section>
       )}
 
@@ -182,24 +286,30 @@ export default function App() {
           <div className="section-heading">
             <span>
               <FlaskConical size={20} />
-              实验流程
+              {analysisMode === "profile" ? "主页分析流程" : "实验流程"}
             </span>
-            <h2>看山正在分析你的努力样本</h2>
-            <p>{query}</p>
+            <h2>
+              {analysisMode === "profile" ? "看山正在整理你的公开创作" : "看山正在分析你的努力样本"}
+            </h2>
+            <p>{analysisMode === "profile" ? profileUrl : query}</p>
           </div>
 
           <div className="lab-workspace">
-            <LabTimeline steps={labSteps} activeIndex={activeStep} />
+            <LabTimeline steps={activeLabSteps} activeIndex={activeStep} />
             <aside className="agent-console">
               <KanshanMascot compact />
               <div>
-                <strong>{analysisError ? "真实数据获取失败" : isAnalyzing ? "Agent 工作中" : "实验完成"}</strong>
+                <strong>{analysisError ? "数据获取失败" : isAnalyzing ? "Agent 工作中" : "分析完成"}</strong>
                 <p>
                   {analysisError
                     ? analysisError
                     : isAnalyzing
-                    ? "正在把知乎经验样本转成可比较的证据。"
-                    : "已生成反卷报告，可以查看诊断结果。"}
+                      ? analysisMode === "profile"
+                        ? "正在把公开创作转成内容结构与反馈信号。"
+                        : "正在把知乎经验样本转成可比较的证据。"
+                      : analysisMode === "profile"
+                        ? "已生成创作者简报，可以查看内容画像。"
+                        : "已生成反卷报告，可以查看诊断结果。"}
                 </p>
               </div>
               {analysisError ? (
@@ -218,7 +328,11 @@ export default function App() {
         </section>
       )}
 
-      {stage === "report" && report && (
+      {stage === "report" && report?.kind === "profile" && (
+        <ProfileReportView report={report} onBack={() => setStage("lab")} />
+      )}
+
+      {stage === "report" && report?.kind === "effort" && (
         <section className="report-section">
           <div className="section-heading">
             <span>

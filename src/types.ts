@@ -1,5 +1,7 @@
 export type StageId = "home" | "lab" | "report";
 
+export type AnalysisMode = "effort" | "profile";
+
 export type ReportDataSource = "live" | "mock";
 
 export type LabStep = {
@@ -22,6 +24,7 @@ export type ZhihuEvidence = {
 };
 
 export type AntiRollReport = {
+  kind: "effort";
   query: string;
   dataSource: ReportDataSource;
   objectType: string;
@@ -38,3 +41,59 @@ export type AntiRollReport = {
   oneWeekExperiment: string[];
   evidence: ZhihuEvidence[];
 };
+
+export type ZhihuProfileContent = {
+  id: string;
+  contentType: "answer" | "article" | "zvideo" | "pin" | "question" | string;
+  url: string;
+  createdAt: number;
+  likeCount: number;
+  commentCount: number;
+  favoriteCount: number;
+  title: string;
+  summary: string;
+};
+
+export type ContentMixItem = {
+  type: string;
+  label: string;
+  count: number;
+  share: number;
+};
+
+export type TopicInsight = {
+  name: string;
+  count: number;
+};
+
+export type ProfileAnalysisReport = {
+  kind: "profile";
+  dataSource: ReportDataSource;
+  profileUrl: string;
+  profileSlug: string;
+  authorizationMode: "owner" | "oauth";
+  sampledCount: number;
+  totalContentCount: number;
+  summary: string;
+  metrics: {
+    influence: number;
+    depth: number;
+    interaction: number;
+    consistency: number;
+  };
+  engagement: {
+    totalLikes: number;
+    totalComments: number;
+    totalFavorites: number;
+    averageLikes: number;
+  };
+  contentMix: ContentMixItem[];
+  topTopics: TopicInsight[];
+  voiceTraits: string[];
+  strengths: string[];
+  opportunities: string[];
+  nextActions: string[];
+  topContent: ZhihuProfileContent[];
+};
+
+export type AnalysisReport = AntiRollReport | ProfileAnalysisReport;
