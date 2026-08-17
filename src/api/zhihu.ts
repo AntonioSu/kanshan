@@ -1,11 +1,30 @@
 import { demoEvidence } from "../data/demoCases";
-import type { AntiRollReport, ZhihuEvidence } from "../types";
+import type { AntiRollReport, ReportDataSource, ZhihuEvidence } from "../types";
+
+type LiveZhihuItem = {
+  id: string;
+  title: string;
+  contentType: string;
+  contentText: string;
+  url: string;
+  commentCount: number;
+  voteUpCount: number;
+  authorName: string;
+  authorityLevel: string;
+};
+
+type LiveZhihuResponse = {
+  items: LiveZhihuItem[];
+};
 
 export interface ZhihuSearchProvider {
+  readonly source: ReportDataSource;
   searchSimilarCases(query: string): Promise<ZhihuEvidence[]>;
 }
 
 export class MockZhihuProvider implements ZhihuSearchProvider {
+  readonly source = "mock" as const;
+
   async searchSimilarCases(query: string) {
     const normalizedQuery = query.toLowerCase();
     const weighted = demoEvidence.filter((item) =>
@@ -16,17 +35,55 @@ export class MockZhihuProvider implements ZhihuSearchProvider {
   }
 }
 
-export class CliZhihuProvider implements ZhihuSearchProvider {
-  async searchSimilarCases(_query: string): Promise<ZhihuEvidence[]> {
-    // Future hook: call the Zhihu CLI here and map raw answers into ZhihuEvidence.
-    // Example shape: zhihu search "<query>" --limit 20 --json
-    throw new Error("CliZhihuProvider is a placeholder for the competition integration.");
+export class ApiZhihuProvider implements ZhihuSearchProvider {
+  readonly source = "live" as const;
+
+  constructor(private readonly endpoint: string) {}
+
+  async searchSimilarCases(query: string): Promise<ZhihuEvidence[]> {
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, count: 6 }),
+    });
+
+    const payload = (await response.json()) as LiveZhihuResponse & { error?: string };
+
+    if (!response.ok) {
+      throw new Error(payload.error || "知乎数据暂时不可用，请稍后重试。");
+    }
+
+    if (!payload.items?.length) {
+      throw new Error("没有找到相关知乎经历，请换一种描述后重试。");
+    }
+
+    return payload.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      sourceType: "真实知乎样本",
+      effortPattern: item.contentText,
+      feedbackSignal: `${item.voteUpCount} 赞同 · ${item.commentCount} 评论`,
+      result: `${item.authorName || "知乎用户"} · ${item.contentType}`,
+      tags: [item.contentType, item.authorityLevel ? `权威等级 ${item.authorityLevel}` : "知乎内容"],
+      url: item.url,
+      authorName: item.authorName,
+      voteUpCount: item.voteUpCount,
+      commentCount: item.commentCount,
+    }));
   }
+}
+
+const liveApiUrl = import.meta.env.VITE_ZHIHU_API_URL?.trim();
+
+export const isLiveZhihuConfigured = Boolean(liveApiUrl);
+
+function createDefaultProvider(): ZhihuSearchProvider {
+  return liveApiUrl ? new ApiZhihuProvider(liveApiUrl) : new MockZhihuProvider();
 }
 
 export async function analyzeEffortPainPoint(
   query: string,
-  provider: ZhihuSearchProvider = new MockZhihuProvider(),
+  provider: ZhihuSearchProvider = createDefaultProvider(),
 ): Promise<AntiRollReport> {
   const evidence = await provider.searchSimilarCases(query);
   const lowerQuery = query.toLowerCase();
@@ -49,6 +106,7 @@ export async function analyzeEffortPainPoint(
 
   return {
     query,
+    dataSource: provider.source,
     objectType,
     coreDiagnosis: isCreator
       ? "你不是更新太少，而是缺少反馈循环。"
@@ -61,7 +119,7 @@ export async function analyzeEffortPainPoint(
     directionScore,
     feedbackScore,
     antiRollScore,
-    evidenceCount: 126,
+    evidenceCount: provider.source === "live" ? evidence.length : 126,
     successPattern: [
       "把大目标拆成可验证假设",
       "每周复盘一次数据或反馈",

@@ -9,9 +9,13 @@ npm install
 npm run dev
 ```
 
-## 后续接入知乎 CLI
+## 知乎真实数据接入
 
-接口预留在 `src/api/zhihu.ts`。当前使用 `MockZhihuProvider`，后续可以替换为 `CliZhihuProvider`，把用户问题传入知乎 CLI 搜索，再将回答抽取为统一的 `ZhihuEvidence` 数据结构。
+前端数据源在 `src/api/zhihu.ts`。未配置 `VITE_ZHIHU_API_URL` 时使用演示数据；配置后会通过服务端代理调用知乎开放平台的知乎搜索 API，并把真实结果转换为统一的 `ZhihuEvidence` 数据结构。
+
+服务端代理位于 `api/zhihu-search.mjs`，需要在服务端设置 `ZHIHU_ACCESS_SECRET`。该密钥不能放进 Vite 变量、浏览器代码或 GitHub 仓库。接口信息以[知乎开放平台文档](https://developer.zhihu.com/docs?key=zhihu_cli)为准。
+
+Vercel 部署时执行 `npm run build:vercel`，前端会自动请求同域的 `/api/zhihu-search`。GitHub Pages 仍可作为 Mock 演示版；如需从 Pages 调用真实代理，请在构建时把 `VITE_ZHIHU_API_URL` 设置为代理的完整 HTTPS 地址。
 
 ## GitHub Pages
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   BarChart3,
@@ -10,7 +11,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { analyzeEffortPainPoint } from "./api/zhihu";
+import { analyzeEffortPainPoint, isLiveZhihuConfigured } from "./api/zhihu";
 import { KanshanMascot } from "./components/KanshanMascot";
 import { LabTimeline } from "./components/LabTimeline";
 import { ScoreMeter } from "./components/ScoreMeter";
@@ -30,6 +31,7 @@ export default function App() {
   const [activeStep, setActiveStep] = useState(0);
   const [report, setReport] = useState<AntiRollReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
 
   const stageIndex = useMemo(() => ["home", "lab", "report"].indexOf(stage), [stage]);
 
@@ -40,7 +42,21 @@ export default function App() {
 
     setActiveStep(0);
     setIsAnalyzing(true);
-    analyzeEffortPainPoint(query).then(setReport);
+    setReport(null);
+    setAnalysisError("");
+
+    let isCancelled = false;
+    analyzeEffortPainPoint(query)
+      .then((nextReport) => {
+        if (!isCancelled) {
+          setReport(nextReport);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isCancelled) {
+          setAnalysisError(error instanceof Error ? error.message : "分析失败，请稍后重试。");
+        }
+      });
 
     const timer = window.setInterval(() => {
       setActiveStep((current) => {
@@ -53,7 +69,10 @@ export default function App() {
       });
     }, 760);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(timer);
+    };
   }, [query, stage]);
 
   function startLab(nextQuery = query) {
@@ -108,11 +127,11 @@ export default function App() {
           <div className="hero-copy">
             <div className="eyebrow">
               <BrainCircuit size={18} />
-              Mock 知乎案例分析 Agent
+              {isLiveZhihuConfigured ? "真实知乎案例分析 Agent" : "知乎案例演示 Agent"}
             </div>
             <h1>找出你的无效努力</h1>
             <p>
-              输入一句努力困惑，看山会把它拆成实验样本，模拟检索知乎相似经历，并生成一份能行动的反卷报告。
+              输入一句努力困惑，看山会把它拆成实验样本，检索相似经历，并生成一份能行动的反卷报告。
             </p>
             <div className="query-panel">
               <label htmlFor="effort-query">努力样本</label>
@@ -172,17 +191,26 @@ export default function App() {
             <aside className="agent-console">
               <KanshanMascot compact />
               <div>
-                <strong>{isAnalyzing ? "Agent 工作中" : "实验完成"}</strong>
+                <strong>{analysisError ? "真实数据获取失败" : isAnalyzing ? "Agent 工作中" : "实验完成"}</strong>
                 <p>
-                  {isAnalyzing
+                  {analysisError
+                    ? analysisError
+                    : isAnalyzing
                     ? "正在把知乎经验样本转成可比较的证据。"
                     : "已生成反卷报告，可以查看诊断结果。"}
                 </p>
               </div>
-              <button className="primary-button" disabled={!report || isAnalyzing} onClick={openReport} type="button">
-                查看报告
-                <ArrowRight size={18} />
-              </button>
+              {analysisError ? (
+                <button className="ghost-button agent-error" onClick={() => setStage("home")} type="button">
+                  <AlertCircle size={18} />
+                  返回修改
+                </button>
+              ) : (
+                <button className="primary-button" disabled={!report || isAnalyzing} onClick={openReport} type="button">
+                  查看报告
+                  <ArrowRight size={18} />
+                </button>
+              )}
             </aside>
           </div>
         </section>
@@ -255,7 +283,11 @@ export default function App() {
 
           <div className="evidence-section">
             <div className="evidence-section__heading">
-              <span>{report.evidenceCount} 个相似经历 Mock 分析</span>
+              <span className={`source-badge source-badge--${report.dataSource}`}>
+                {report.dataSource === "live"
+                  ? `${report.evidenceCount} 条知乎真实结果`
+                  : `${report.evidenceCount} 个演示样本分析`}
+              </span>
               <button className="ghost-button" onClick={() => setStage("lab")} type="button">
                 <ArrowLeft size={18} />
                 回看流程
