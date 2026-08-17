@@ -20,20 +20,15 @@ export function EvidenceCard({ evidence }: EvidenceCardProps) {
         )}
       </div>
       <h3>{evidence.title}</h3>
-      <dl>
-        <div>
-          <dt>努力模式</dt>
-          <dd>{evidence.effortPattern}</dd>
-        </div>
-        <div>
-          <dt>反馈信号</dt>
-          <dd>{evidence.feedbackSignal}</dd>
-        </div>
-        <div>
-          <dt>结果</dt>
-          <dd>{evidence.result}</dd>
-        </div>
-      </dl>
+      {evidence.insight && <blockquote>{evidence.insight}</blockquote>}
+      <div className="evidence-card__excerpt">
+        <span>证据片段</span>
+        <p>{evidence.effortPattern}</p>
+      </div>
+      <div className="evidence-card__footer">
+        <strong>{evidence.feedbackSignal}</strong>
+        <span>{evidence.result}</span>
+      </div>
     </article>
   );
 }

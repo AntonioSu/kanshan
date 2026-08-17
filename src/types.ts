@@ -21,6 +21,13 @@ export type ZhihuEvidence = {
   authorName?: string;
   voteUpCount?: number;
   commentCount?: number;
+  insight?: string;
+};
+
+export type SharpInsight = {
+  title: string;
+  detail: string;
+  action: string;
 };
 
 export type AntiRollReport = {
@@ -39,6 +46,7 @@ export type AntiRollReport = {
   stopDoing: string[];
   startDoing: string[];
   oneWeekExperiment: string[];
+  sharpInsights: SharpInsight[];
   evidence: ZhihuEvidence[];
 };
 

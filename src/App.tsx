@@ -397,12 +397,32 @@ export default function App() {
             </div>
           </div>
 
+          <section className="sharp-insights-section">
+            <div className="sharp-insights-heading">
+              <span className="panel-label">看山的反常识结论</span>
+              <h3>真正的问题，不在你以为的地方</h3>
+            </div>
+            <div className="sharp-insights-grid">
+              {report.sharpInsights.map((insight, index) => (
+                <article key={insight.title}>
+                  <span className="sharp-insight-index">0{index + 1}</span>
+                  <h4>{insight.title}</h4>
+                  <p>{insight.detail}</p>
+                  <div>
+                    <strong>立刻验证</strong>
+                    <span>{insight.action}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <div className="evidence-section">
             <div className="evidence-section__heading">
               <span className={`source-badge source-badge--${report.dataSource}`}>
                 {report.dataSource === "live"
-                  ? `${report.evidenceCount} 条知乎真实结果`
-                  : `${report.evidenceCount} 个演示样本分析`}
+                  ? `${report.evidenceCount} 条可追溯知乎证据`
+                  : `${report.evidenceCount} 个演示证据样本`}
               </span>
               <button className="ghost-button" onClick={() => setStage("lab")} type="button">
                 <ArrowLeft size={18} />
