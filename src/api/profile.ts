@@ -91,7 +91,8 @@ function averagePostingGap(items: ZhihuProfileContent[]) {
   const dates = items
     .map((item) => item.createdAt)
     .filter(Boolean)
-    .sort((a, b) => b - a);
+    .sort((a, b) => b - a)
+    .slice(0, 20);
 
   if (dates.length < 2) {
     return 30;
@@ -149,7 +150,7 @@ function createProfileReport(
 
   const strengths = [
     `代表内容获得 ${topContent[0]?.likeCount || 0} 次赞同，已有明确的高反馈样本。`,
-    `${topTopics[0].name}是当前最稳定的内容主题，可继续形成系列。`,
+    `${topTopics[0].name}是当前最稳定的内容主题，可以继续形成系列。`,
     totalFavorites >= totalComments
       ? "收藏数高于评论数，内容更像可复用的知识资产。"
       : "评论反馈活跃，选题具备讨论与连接能力。",
