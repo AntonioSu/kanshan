@@ -50,7 +50,7 @@ const profileLabSteps = createProfileLabSteps(isLiveZhihuProfileConfigured);
 export default function App() {
   const [stage, setStage] = useState<StageId>("home");
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("effort");
-  const [query, setQuery] = useState(examples[0].query);
+  const [query, setQuery] = useState(examples[2].query);
   const [profileUrl, setProfileUrl] = useState("");
   const [activeStep, setActiveStep] = useState(0);
   const [report, setReport] = useState<AnalysisReport | null>(null);
