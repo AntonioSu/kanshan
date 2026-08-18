@@ -360,8 +360,8 @@ export default function App() {
             <div className="profile-scope-strip" aria-label="主页分析范围">
               {profileScope === "public" ? (
                 <>
-                  <span><strong>4</strong>组公开检索</span>
-                  <span><strong>40</strong>条候选上限</span>
+                  <span><strong>1</strong>次作者定向检索</span>
+                  <span><strong>10</strong>条候选上限</span>
                   <span><strong>1:1</strong>昵称严格过滤</span>
                 </>
               ) : (

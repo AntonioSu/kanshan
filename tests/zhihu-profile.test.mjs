@@ -149,7 +149,8 @@ test("public profile analysis aggregates exact-author search results", async () 
   );
 
   assert.equal(response.statusCode, 200);
-  assert.equal(queries.length, 4);
+  assert.equal(queries.length, 1);
+  assert.deepEqual(queries, ["示例作者 知乎作者"]);
   assert.equal(response.body.authorizationMode, "public-search");
   assert.equal(response.body.displayName, "示例作者");
   assert.equal(response.body.totalCount, 1);

@@ -88,7 +88,7 @@ export function createProfileLabSteps(isLiveData: boolean, scope: ProfileAnalysi
       title: isPublic ? "检索公开创作" : "获取公开创作",
       detail: isLiveData
         ? isPublic
-          ? "调用知乎搜索 API，执行回答、文章、创作等多组检索。"
+          ? "调用知乎搜索 API，执行一次作者定向检索并严格过滤昵称。"
           : "调用知乎用户内容 API，同时获取近期与高赞内容。"
         : "读取主页分析演示样本。",
     },

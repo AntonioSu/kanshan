@@ -18,7 +18,7 @@ npm run dev
 
 服务端代理位于 `api/zhihu-search.mjs` 和 `api/zhihu-profile.mjs`，需要在服务端设置 `ZHIHU_ACCESS_SECRET`。该密钥不能放进 Vite 变量、浏览器代码或 GitHub 仓库。接口信息以[知乎开放平台文档](https://developer.zhihu.com/docs?key=zhihu_cli)为准。
 
-个人内容 API 在不提供 OAuth Token 时只返回 Access Secret 所属账号的公开内容。其他用户若未完成 OAuth，应用会改用知乎搜索 API，执行多组检索并按作者昵称严格过滤；这种模式只代表公开搜索快照，不等于完整主页数据，也不包含收藏数。
+个人内容 API 在不提供 OAuth Token 时只返回 Access Secret 所属账号的公开内容。其他用户若未完成 OAuth，应用会改用知乎搜索 API，执行一次作者定向检索并按昵称严格过滤；这种模式只代表公开搜索快照，不等于完整主页数据，也不包含收藏数。
 
 Vercel 部署时执行 `npm run build:vercel`，前端会自动请求同域的 `/api/zhihu-search` 与 `/api/zhihu-profile`。GitHub Pages 仍可作为 Mock 演示版；如需从 Pages 调用真实代理，请在构建时设置两个 API URL。
 

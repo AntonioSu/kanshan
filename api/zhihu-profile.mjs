@@ -126,38 +126,29 @@ async function fetchContents(accessSecret, sortField, limit) {
 }
 
 async function searchByAuthor(accessSecret, displayName) {
-  const queries = [
-    `${displayName} 知乎作者`,
-    `${displayName} 回答`,
-    `${displayName} 文章`,
-    `${displayName} 创作`,
-  ];
+  const query = `${displayName} 知乎作者`;
   const expectedAuthor = normalizeName(displayName);
-  const results = await Promise.all(
-    queries.map(async (query) => {
-      const url = new URL(ZHIHU_SEARCH_URL);
-      url.searchParams.set("Query", query);
-      url.searchParams.set("Count", "10");
-      const upstreamResponse = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessSecret}`,
-          "Content-Type": "application/json",
-          "X-Request-Timestamp": String(Math.floor(Date.now() / 1000)),
-        },
-      });
-      const payload = await upstreamResponse.json();
+  const url = new URL(ZHIHU_SEARCH_URL);
+  url.searchParams.set("Query", query);
+  url.searchParams.set("Count", "10");
+  const upstreamResponse = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessSecret}`,
+      "Content-Type": "application/json",
+      "X-Request-Timestamp": String(Math.floor(Date.now() / 1000)),
+    },
+  });
+  const payload = await upstreamResponse.json();
 
-      if (!upstreamResponse.ok || payload.Code !== 0) {
-        throw upstreamError(payload);
-      }
+  if (!upstreamResponse.ok || payload.Code !== 0) {
+    throw upstreamError(payload);
+  }
 
-      return (payload.Data?.Items || [])
-        .map(normalizeSearchItem)
-        .filter((item) => normalizeName(item.authorName) === expectedAuthor);
-    }),
-  );
+  const results = (payload.Data?.Items || [])
+    .map(normalizeSearchItem)
+    .filter((item) => normalizeName(item.authorName) === expectedAuthor);
   const mergedItems = new Map();
-  results.flat().forEach((item) => {
+  results.forEach((item) => {
     if (item.url) {
       mergedItems.set(item.url, item);
     }
@@ -216,7 +207,7 @@ export default async function handler(request, response) {
         profileUrl,
         displayName,
         authorizationMode: "public-search",
-        coverageNote: `通过 4 组知乎站内搜索找到 ${items.length} 条作者昵称完全匹配的公开结果；不代表完整主页，搜索接口不提供收藏数。`,
+        coverageNote: `通过一次作者定向搜索找到 ${items.length} 条昵称完全匹配的公开结果；不代表完整主页，搜索接口不提供收藏数。`,
         totalCount: items.length,
         items,
       });
