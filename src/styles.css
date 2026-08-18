@@ -432,6 +432,23 @@ button:disabled {
   line-height: 1.45;
 }
 
+.example-strip strong,
+.example-strip span {
+  display: block;
+}
+
+.example-strip strong {
+  margin-bottom: 0.35rem;
+  color: #0f746f;
+  font-size: 0.88rem;
+}
+
+.example-strip span {
+  color: #52676c;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .mascot {
   position: relative;
   z-index: 3;

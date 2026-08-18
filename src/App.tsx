@@ -24,9 +24,24 @@ import { createLabSteps, createProfileLabSteps } from "./data/demoCases";
 import type { AnalysisMode, AnalysisReport, StageId } from "./types";
 
 const examples = [
-  "我每天学习10小时，为什么还是没进步？",
-  "我每天写公众号，但是没人看",
-  "我投了200份简历，为什么没有面试？",
+  {
+    label: "考研数学 · 3 个月",
+    preview: "每天 10 小时，70% 在看课和抄笔记，模拟题仍在 85 分左右。",
+    query:
+      "我准备考研数学已经 3 个月，每天学习 8 到 10 小时，其中大约 70% 的时间在看网课、整理笔记和重做熟悉题。最近做了 4 套模拟卷，成绩一直在 82 到 88 分之间；遇到综合题经常没有思路，错题订正后隔一周还会再错。我试过延长学习时间和换老师，但分数没有明显变化。问题到底出在哪里？",
+  },
+  {
+    label: "公众号日更 · 60 天",
+    preview: "职场号发了 60 篇，平均阅读 120，选题主要依靠个人感觉。",
+    query:
+      "我运营一个面向工作 3 到 5 年职场人的公众号，已经连续日更 60 天，共发布 60 篇文章，每篇投入约 3 小时。现在有 1,800 个关注者，但平均阅读量只有 120 左右，新增关注通常不到 5 个。我主要根据自己的职场经历选题，很少分析搜索需求，也没有测试标题；我试过增加篇幅和提高更新频率，数据反而更差。下一步应该继续日更，还是调整选题和内容结构？",
+  },
+  {
+    label: "转行求职 · 200 份",
+    preview: "四周批量投递产品岗，只获 3 次初筛，没有进入业务面试。",
+    query:
+      "我想从运营转行做互联网产品经理，过去 4 周在 6 个招聘平台投了约 200 份简历，主要使用同一版简历，只替换公司名称。结果只有 3 次电话初筛，没有进入业务面试。我的简历写了 5 年运营经验和多个增长项目，但没有产品作品集，也没有按岗位要求重写项目成果。我已经尝试继续扩大投递量和降低薪资预期，回复率仍然很低。应该先改简历、补作品集，还是继续海投？",
+  },
 ];
 
 const effortLabSteps = createLabSteps(isLiveZhihuConfigured);
@@ -35,7 +50,7 @@ const profileLabSteps = createProfileLabSteps(isLiveZhihuProfileConfigured);
 export default function App() {
   const [stage, setStage] = useState<StageId>("home");
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("effort");
-  const [query, setQuery] = useState(examples[0]);
+  const [query, setQuery] = useState(examples[0].query);
   const [profileUrl, setProfileUrl] = useState("");
   const [activeStep, setActiveStep] = useState(0);
   const [report, setReport] = useState<AnalysisReport | null>(null);
@@ -102,6 +117,12 @@ export default function App() {
     setQuery(nextQuery);
     setHomeError("");
     setStage("lab");
+  }
+
+  function showNextExample() {
+    const currentIndex = examples.findIndex((example) => example.query === query);
+    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % examples.length;
+    setQuery(examples[nextIndex].query);
   }
 
   function startProfileLab() {
@@ -240,7 +261,7 @@ export default function App() {
                   {analysisMode === "profile" ? "分析主页" : "开始实验"}
                 </button>
                 {analysisMode === "effort" && (
-                  <button className="ghost-button" onClick={() => setQuery(examples[1])} type="button">
+                  <button className="ghost-button" onClick={showNextExample} type="button">
                     换个样本
                   </button>
                 )}
@@ -263,8 +284,9 @@ export default function App() {
           {analysisMode === "effort" ? (
             <div className="example-strip" aria-label="示例问题">
               {examples.map((example) => (
-                <button key={example} onClick={() => startEffortLab(example)} type="button">
-                  {example}
+                <button key={example.label} onClick={() => setQuery(example.query)} type="button">
+                  <strong>{example.label}</strong>
+                  <span>{example.preview}</span>
                 </button>
               ))}
             </div>
