@@ -228,6 +228,35 @@ button:disabled {
   box-shadow: 0 5px 18px rgba(38, 73, 69, 0.12);
 }
 
+.profile-source-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.3rem;
+  background: #eef6f3;
+  border-radius: 8px;
+}
+
+.profile-source-toggle button {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.55rem 0.7rem;
+  color: #52656a;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-weight: 900;
+}
+
+.profile-source-toggle button.is-selected {
+  color: #0b5552;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgba(38, 73, 69, 0.12);
+}
+
 .query-panel textarea {
   width: 100%;
   min-height: 8rem;
@@ -1628,6 +1657,14 @@ button:disabled {
   text-decoration: none;
 }
 
+.profile-coverage-note {
+  max-width: 72rem;
+  margin: 0.75rem 0 0;
+  color: #52656a;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
 .profile-report-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.88fr) minmax(22rem, 1.12fr);
@@ -1954,6 +1991,10 @@ button:disabled {
 @media (max-width: 620px) {
   .topbar {
     padding: 0.75rem 1rem;
+  }
+
+  .profile-source-toggle {
+    grid-template-columns: 1fr;
   }
 
   .brand-button span {

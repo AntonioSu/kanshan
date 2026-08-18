@@ -5,12 +5,15 @@ import type {
   ReportDataSource,
   TopicInsight,
   ZhihuProfileContent,
+  ProfileAnalysisScope,
 } from "../types";
 
 type ProfileApiResponse = {
   items: ZhihuProfileContent[];
   totalCount: number;
-  authorizationMode: "owner" | "oauth";
+  authorizationMode: "owner" | "oauth" | "public-search";
+  displayName?: string;
+  coverageNote?: string;
 };
 
 const profileApiUrl = import.meta.env.VITE_ZHIHU_PROFILE_API_URL?.trim();
@@ -107,7 +110,9 @@ function createProfileReport(
   items: ZhihuProfileContent[],
   totalCount: number,
   dataSource: ReportDataSource,
-  authorizationMode: "owner" | "oauth",
+  authorizationMode: "owner" | "oauth" | "public-search",
+  profileDisplayName = "",
+  coverageNote = "",
 ): ProfileAnalysisReport {
   const parsedProfile = parseZhihuProfileUrl(profileUrl);
   if (!parsedProfile) {
@@ -179,7 +184,14 @@ function createProfileReport(
     dataSource,
     profileUrl: parsedProfile.normalizedUrl,
     profileSlug: parsedProfile.slug,
+    profileDisplayName,
     authorizationMode,
+    coverageNote:
+      coverageNote ||
+      (authorizationMode === "public-search"
+        ? "基于知乎站内公开检索结果，不代表该主页的全部创作。"
+        : "基于当前已授权账号返回的公开创作内容。"),
+    favoriteDataAvailable: authorizationMode !== "public-search",
     sampledCount: items.length,
     totalContentCount: Math.max(totalCount, items.length),
     summary: `基于 ${items.length} 条公开创作样本，这个账号以${contentMix[0].label}为主，内容重点集中在${topTopics
@@ -208,20 +220,34 @@ function createProfileReport(
   };
 }
 
-export async function analyzeZhihuProfile(profileUrl: string): Promise<ProfileAnalysisReport> {
+export async function analyzeZhihuProfile(
+  profileUrl: string,
+  options: { scope: ProfileAnalysisScope; displayName?: string } = { scope: "owner" },
+): Promise<ProfileAnalysisReport> {
   const parsedProfile = parseZhihuProfileUrl(profileUrl);
   if (!parsedProfile) {
     throw new Error("请输入完整的知乎个人主页链接，例如 https://www.zhihu.com/people/username。");
   }
 
   if (!profileApiUrl) {
-    return createProfileReport(profileUrl, demoProfileContent, demoProfileContent.length, "mock", "owner");
+    return createProfileReport(
+      profileUrl,
+      demoProfileContent,
+      demoProfileContent.length,
+      "mock",
+      options.scope === "public" ? "public-search" : "owner",
+      options.displayName || "演示创作者",
+    );
   }
 
   const response = await fetch(profileApiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profileUrl: parsedProfile.normalizedUrl }),
+    body: JSON.stringify({
+      profileUrl: parsedProfile.normalizedUrl,
+      scope: options.scope,
+      displayName: options.displayName?.trim() || "",
+    }),
   });
   const payload = (await response.json()) as ProfileApiResponse & { error?: string };
 
@@ -235,5 +261,7 @@ export async function analyzeZhihuProfile(profileUrl: string): Promise<ProfileAn
     payload.totalCount,
     "live",
     payload.authorizationMode,
+    payload.displayName || options.displayName || "",
+    payload.coverageNote || "",
   );
 }

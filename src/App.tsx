@@ -21,7 +21,7 @@ import { KanshanMascot } from "./components/KanshanMascot";
 import { LabTimeline } from "./components/LabTimeline";
 import { ProfileReportView } from "./components/ProfileReportView";
 import { createLabSteps, createProfileLabSteps } from "./data/demoCases";
-import type { AnalysisMode, AnalysisReport, StageId } from "./types";
+import type { AnalysisMode, AnalysisReport, ProfileAnalysisScope, StageId } from "./types";
 
 const examples = [
   {
@@ -45,13 +45,14 @@ const examples = [
 ];
 
 const effortLabSteps = createLabSteps(isLiveZhihuConfigured);
-const profileLabSteps = createProfileLabSteps(isLiveZhihuProfileConfigured);
 
 export default function App() {
   const [stage, setStage] = useState<StageId>("home");
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("effort");
   const [query, setQuery] = useState(examples[2].query);
   const [profileUrl, setProfileUrl] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [profileScope, setProfileScope] = useState<ProfileAnalysisScope>("public");
   const [activeStep, setActiveStep] = useState(0);
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -59,7 +60,13 @@ export default function App() {
   const [homeError, setHomeError] = useState("");
 
   const stageIndex = useMemo(() => ["home", "lab", "report"].indexOf(stage), [stage]);
-  const activeLabSteps = analysisMode === "profile" ? profileLabSteps : effortLabSteps;
+  const activeLabSteps = useMemo(
+    () =>
+      analysisMode === "profile"
+        ? createProfileLabSteps(isLiveZhihuProfileConfigured, profileScope)
+        : effortLabSteps,
+    [analysisMode, profileScope],
+  );
 
   useEffect(() => {
     if (stage !== "lab") {
@@ -73,7 +80,9 @@ export default function App() {
 
     let isCancelled = false;
     const analysis =
-      analysisMode === "profile" ? analyzeZhihuProfile(profileUrl) : analyzeEffortPainPoint(query);
+      analysisMode === "profile"
+        ? analyzeZhihuProfile(profileUrl, { scope: profileScope, displayName: profileName })
+        : analyzeEffortPainPoint(query);
 
     analysis
       .then((nextReport) => {
@@ -102,7 +111,7 @@ export default function App() {
       isCancelled = true;
       window.clearInterval(timer);
     };
-  }, [activeLabSteps.length, analysisMode, profileUrl, query, stage]);
+  }, [activeLabSteps.length, analysisMode, profileName, profileScope, profileUrl, query, stage]);
 
   function selectMode(nextMode: AnalysisMode) {
     setAnalysisMode(nextMode);
@@ -128,6 +137,11 @@ export default function App() {
   function startProfileLab() {
     if (!parseZhihuProfileUrl(profileUrl)) {
       setHomeError("请输入完整的知乎个人主页链接，例如 https://www.zhihu.com/people/username");
+      return;
+    }
+
+    if (profileScope === "public" && !profileName.trim()) {
+      setHomeError("请输入该主页显示的知乎昵称，以便准确过滤同名内容。");
       return;
     }
 
@@ -190,10 +204,10 @@ export default function App() {
                   ? "真实知乎案例分析 Agent"
                   : "知乎案例演示 Agent"}
             </div>
-            <h1>{analysisMode === "profile" ? "读懂你的知乎内容" : "找出你的无效努力"}</h1>
+            <h1>{analysisMode === "profile" ? "读懂一个知乎账号" : "找出你的无效努力"}</h1>
             <p>
               {analysisMode === "profile"
-                ? "汇总授权账号的公开创作，识别主题、内容结构、互动表现与下一步增长机会。"
+                ? "输入任意公开主页和昵称，检索该作者的公开创作；授权账号还能读取更完整的内容数据。"
                 : "输入一句努力困惑，看山会把它拆成实验样本，检索相似经历，并生成一份能行动的反卷报告。"}
             </p>
             <div className="query-panel">
@@ -228,7 +242,31 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <label htmlFor="profile-url">当前已授权账号的知乎主页</label>
+                  <div className="profile-source-toggle" aria-label="选择主页数据范围">
+                    <button
+                      className={profileScope === "public" ? "is-selected" : ""}
+                      onClick={() => {
+                        setProfileScope("public");
+                        setHomeError("");
+                      }}
+                      type="button"
+                    >
+                      <Search size={16} />
+                      公开账号
+                    </button>
+                    <button
+                      className={profileScope === "owner" ? "is-selected" : ""}
+                      onClick={() => {
+                        setProfileScope("owner");
+                        setHomeError("");
+                      }}
+                      type="button"
+                    >
+                      <ShieldCheck size={16} />
+                      我的授权账号
+                    </button>
+                  </div>
+                  <label htmlFor="profile-url">知乎个人主页</label>
                   <div className="url-input-wrap">
                     <Link2 size={18} />
                     <input
@@ -243,9 +281,33 @@ export default function App() {
                       value={profileUrl}
                     />
                   </div>
+                  {profileScope === "public" && (
+                    <>
+                      <label htmlFor="profile-name">主页显示昵称</label>
+                      <div className="url-input-wrap">
+                        <User size={18} />
+                        <input
+                          autoComplete="off"
+                          id="profile-name"
+                          maxLength={40}
+                          onChange={(event) => {
+                            setProfileName(event.target.value);
+                            setHomeError("");
+                          }}
+                          placeholder="例如：刘看山"
+                          type="text"
+                          value={profileName}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="profile-auth-note">
-                    <ShieldCheck size={17} />
-                    <span>当前支持 Access Secret 所属账号；其他用户需完成知乎 OAuth 授权。</span>
+                    {profileScope === "public" ? <Search size={17} /> : <ShieldCheck size={17} />}
+                    <span>
+                      {profileScope === "public"
+                        ? "通过知乎站内搜索获取公开结果并按昵称严格过滤，不读取关注、收藏或非公开数据。"
+                        : "通过 Access Secret 读取当前授权账号的近期与高赞公开创作。"}
+                    </span>
                   </div>
                   {homeError && <p className="form-error">{homeError}</p>}
                 </>
@@ -277,7 +339,11 @@ export default function App() {
             </div>
             <div className="lab-note">
               <Search size={18} />
-              {analysisMode === "profile" ? "等待授权主页" : "正在等待样本"}
+              {analysisMode === "profile"
+                ? profileScope === "public"
+                  ? "等待公开主页"
+                  : "等待授权主页"
+                : "正在等待样本"}
             </div>
           </div>
 
@@ -292,9 +358,19 @@ export default function App() {
             </div>
           ) : (
             <div className="profile-scope-strip" aria-label="主页分析范围">
-              <span><strong>50</strong>近期内容</span>
-              <span><strong>20</strong>高赞内容</span>
-              <span><strong>8</strong>分析维度</span>
+              {profileScope === "public" ? (
+                <>
+                  <span><strong>4</strong>组公开检索</span>
+                  <span><strong>40</strong>条候选上限</span>
+                  <span><strong>1:1</strong>昵称严格过滤</span>
+                </>
+              ) : (
+                <>
+                  <span><strong>50</strong>近期内容</span>
+                  <span><strong>20</strong>高赞内容</span>
+                  <span><strong>8</strong>分析维度</span>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -308,7 +384,11 @@ export default function App() {
               {analysisMode === "profile" ? "主页分析流程" : "实验流程"}
             </span>
             <h2>
-              {analysisMode === "profile" ? "看山正在整理你的公开创作" : "看山正在分析你的努力样本"}
+              {analysisMode === "profile"
+                ? profileScope === "public"
+                  ? "看山正在检索这位作者的公开创作"
+                  : "看山正在整理你的公开创作"
+                : "看山正在分析你的努力样本"}
             </h2>
             <p>{analysisMode === "profile" ? profileUrl : query}</p>
           </div>
@@ -324,7 +404,9 @@ export default function App() {
                     ? analysisError
                     : isAnalyzing
                       ? analysisMode === "profile"
-                        ? "正在把公开创作转成内容结构与反馈信号。"
+                        ? profileScope === "public"
+                          ? "正在按作者昵称过滤知乎公开搜索结果。"
+                          : "正在把授权创作转成内容结构与反馈信号。"
                         : "正在把知乎经验样本转成可比较的证据。"
                       : analysisMode === "profile"
                         ? "已生成创作者简报，可以查看内容画像。"

@@ -1,4 +1,5 @@
 const ZHIHU_USER_CONTENTS_URL = "https://developer.zhihu.com/api/v1/user/contents";
+const ZHIHU_SEARCH_URL = "https://developer.zhihu.com/api/v1/content/zhihu_search";
 const DEFAULT_ALLOWED_ORIGINS = new Set([
   "https://antoniosu.github.io",
   "http://127.0.0.1:5173",
@@ -64,6 +65,28 @@ function normalizeItem(item) {
   };
 }
 
+function normalizeSearchItem(item) {
+  return {
+    id: `${item.ContentType || "content"}:${item.ContentID || item.Url}`,
+    contentType: String(item.ContentType || "content").toLowerCase(),
+    url: item.Url || "",
+    createdAt: Number(item.EditTime) || 0,
+    likeCount: Number(item.VoteUpCount) || 0,
+    commentCount: Number(item.CommentCount) || 0,
+    favoriteCount: 0,
+    title: item.Title || "知乎内容",
+    summary: item.ContentText || "",
+    authorName: item.AuthorName || "",
+  };
+}
+
+function normalizeName(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
 function upstreamError(payload) {
   if (payload.Code === 20001) {
     return { status: 401, message: "知乎接口鉴权失败，请检查 Access Secret。" };
@@ -102,6 +125,47 @@ async function fetchContents(accessSecret, sortField, limit) {
   };
 }
 
+async function searchByAuthor(accessSecret, displayName) {
+  const queries = [
+    `${displayName} 知乎作者`,
+    `${displayName} 回答`,
+    `${displayName} 文章`,
+    `${displayName} 创作`,
+  ];
+  const expectedAuthor = normalizeName(displayName);
+  const results = await Promise.all(
+    queries.map(async (query) => {
+      const url = new URL(ZHIHU_SEARCH_URL);
+      url.searchParams.set("Query", query);
+      url.searchParams.set("Count", "10");
+      const upstreamResponse = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessSecret}`,
+          "Content-Type": "application/json",
+          "X-Request-Timestamp": String(Math.floor(Date.now() / 1000)),
+        },
+      });
+      const payload = await upstreamResponse.json();
+
+      if (!upstreamResponse.ok || payload.Code !== 0) {
+        throw upstreamError(payload);
+      }
+
+      return (payload.Data?.Items || [])
+        .map(normalizeSearchItem)
+        .filter((item) => normalizeName(item.authorName) === expectedAuthor);
+    }),
+  );
+  const mergedItems = new Map();
+  results.flat().forEach((item) => {
+    if (item.url) {
+      mergedItems.set(item.url, item);
+    }
+  });
+
+  return [...mergedItems.values()].map(({ authorName: _authorName, ...item }) => item);
+}
+
 export default async function handler(request, response) {
   applyCors(request, response);
 
@@ -130,7 +194,34 @@ export default async function handler(request, response) {
     return sendError(response, 400, "请输入有效的知乎个人主页链接。");
   }
 
+  const scope = body.scope === "public" ? "public" : "owner";
+  const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+
+  if (scope === "public" && (!displayName || displayName.length > 40)) {
+    return sendError(response, 400, "分析公开账号时，请填写正确的知乎昵称。");
+  }
+
   try {
+    if (scope === "public") {
+      const items = await searchByAuthor(accessSecret, displayName);
+      if (!items.length) {
+        return sendError(
+          response,
+          404,
+          "没有检索到该昵称发布的公开内容。请核对主页显示昵称，或改用授权账号分析。",
+        );
+      }
+
+      return response.status(200).json({
+        profileUrl,
+        displayName,
+        authorizationMode: "public-search",
+        coverageNote: `通过 4 组知乎站内搜索找到 ${items.length} 条作者昵称完全匹配的公开结果；不代表完整主页，搜索接口不提供收藏数。`,
+        totalCount: items.length,
+        items,
+      });
+    }
+
     const [recent, popular] = await Promise.all([
       fetchContents(accessSecret, "ts", 50),
       fetchContents(accessSecret, "like_count", 20),
@@ -144,7 +235,9 @@ export default async function handler(request, response) {
 
     return response.status(200).json({
       profileUrl,
+      displayName,
       authorizationMode: "owner",
+      coverageNote: "通过用户内容接口获取当前 Access Secret 所属账号的近期与高赞公开创作。",
       totalCount: Math.max(recent.totalCount, popular.totalCount),
       items: [...mergedItems.values()],
     });

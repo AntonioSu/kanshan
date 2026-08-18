@@ -2,6 +2,8 @@ export type StageId = "home" | "lab" | "report";
 
 export type AnalysisMode = "effort" | "profile";
 
+export type ProfileAnalysisScope = "owner" | "public";
+
 export type ReportDataSource = "live" | "mock";
 
 export type LabStep = {
@@ -136,7 +138,10 @@ export type ProfileAnalysisReport = {
   dataSource: ReportDataSource;
   profileUrl: string;
   profileSlug: string;
-  authorizationMode: "owner" | "oauth";
+  profileDisplayName: string;
+  authorizationMode: "owner" | "oauth" | "public-search";
+  coverageNote: string;
+  favoriteDataAvailable: boolean;
   sampledCount: number;
   totalContentCount: number;
   summary: string;

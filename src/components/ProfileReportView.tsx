@@ -26,15 +26,20 @@ export function ProfileReportView({ report, onBack }: ProfileReportViewProps) {
         </span>
         <h2>知乎内容体检</h2>
         <div className="profile-identity-row">
-          <strong>@{report.profileSlug}</strong>
+          <strong>{report.profileDisplayName || `@${report.profileSlug}`}</strong>
           <a href={report.profileUrl} rel="noreferrer" target="_blank">
             查看主页
             <ExternalLink size={14} />
           </a>
           <span className={`source-badge source-badge--${report.dataSource}`}>
-            {report.dataSource === "live" ? "真实授权数据" : "演示数据"}
+            {report.dataSource === "mock"
+              ? "演示数据"
+              : report.authorizationMode === "public-search"
+                ? "公开检索数据"
+                : "真实授权数据"}
           </span>
         </div>
+        <p className="profile-coverage-note">{report.coverageNote}</p>
       </div>
 
       <div className="profile-report-grid">
@@ -53,7 +58,7 @@ export function ProfileReportView({ report, onBack }: ProfileReportViewProps) {
           <div>
             <FileStack size={19} />
             <strong>{report.totalContentCount}</strong>
-            <span>公开内容</span>
+            <span>{report.authorizationMode === "public-search" ? "检索到内容" : "公开内容"}</span>
           </div>
           <div>
             <ThumbsUp size={19} />
@@ -67,8 +72,8 @@ export function ProfileReportView({ report, onBack }: ProfileReportViewProps) {
           </div>
           <div>
             <Bookmark size={19} />
-            <strong>{report.engagement.totalFavorites}</strong>
-            <span>样本收藏</span>
+            <strong>{report.favoriteDataAvailable ? report.engagement.totalFavorites : "—"}</strong>
+            <span>{report.favoriteDataAvailable ? "样本收藏" : "收藏未提供"}</span>
           </div>
         </section>
 
@@ -143,7 +148,9 @@ export function ProfileReportView({ report, onBack }: ProfileReportViewProps) {
       <div className="evidence-section">
         <div className="evidence-section__heading">
           <span className={`source-badge source-badge--${report.dataSource}`}>
-            已分析 {report.sampledCount} 条公开创作，展示代表内容
+            {report.authorizationMode === "public-search"
+              ? `已分析 ${report.sampledCount} 条作者匹配结果，展示代表内容`
+              : `已分析 ${report.sampledCount} 条公开创作，展示代表内容`}
           </span>
           <button className="ghost-button" onClick={onBack} type="button">
             <ArrowLeft size={18} />

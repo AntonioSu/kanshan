@@ -64,6 +64,116 @@ test("profile endpoint rejects non-profile URLs", async () => {
   }
 });
 
+test("public profile analysis requires a display name", async () => {
+  const originalSecret = process.env.ZHIHU_ACCESS_SECRET;
+  process.env.ZHIHU_ACCESS_SECRET = "test-secret";
+  const response = createResponse();
+
+  await handler(
+    {
+      method: "POST",
+      headers: {},
+      body: { profileUrl: "https://www.zhihu.com/people/demo", scope: "public" },
+    },
+    response,
+  );
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.error, "分析公开账号时，请填写正确的知乎昵称。");
+
+  if (originalSecret === undefined) {
+    delete process.env.ZHIHU_ACCESS_SECRET;
+  } else {
+    process.env.ZHIHU_ACCESS_SECRET = originalSecret;
+  }
+});
+
+test("public profile analysis aggregates exact-author search results", async () => {
+  const originalSecret = process.env.ZHIHU_ACCESS_SECRET;
+  const originalFetch = globalThis.fetch;
+  process.env.ZHIHU_ACCESS_SECRET = "test-secret";
+  const queries = [];
+
+  globalThis.fetch = async (url, options) => {
+    queries.push(url.searchParams.get("Query"));
+    assert.equal(url.origin + url.pathname, "https://developer.zhihu.com/api/v1/content/zhihu_search");
+    assert.equal(url.searchParams.get("Count"), "10");
+    assert.equal(options.headers.Authorization, "Bearer test-secret");
+
+    return new Response(
+      JSON.stringify({
+        Code: 0,
+        Data: {
+          Items: [
+            {
+              ContentType: "Answer",
+              ContentID: "1",
+              Url: "https://www.zhihu.com/question/1/answer/1",
+              EditTime: 1745486539,
+              VoteUpCount: 88,
+              CommentCount: 9,
+              Title: "创作者的代表回答",
+              ContentText: "这是公开搜索返回的内容摘要。",
+              AuthorName: "示例作者",
+            },
+            {
+              ContentType: "Article",
+              ContentID: "2",
+              Url: "https://zhuanlan.zhihu.com/p/2",
+              EditTime: 1745486000,
+              VoteUpCount: 999,
+              CommentCount: 30,
+              Title: "同名提及内容",
+              ContentText: "作者不是目标用户。",
+              AuthorName: "其他作者",
+            },
+          ],
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  const response = createResponse();
+  await handler(
+    {
+      method: "POST",
+      headers: { origin: "https://antoniosu.github.io" },
+      body: {
+        profileUrl: "https://www.zhihu.com/people/example",
+        scope: "public",
+        displayName: "示例作者",
+      },
+    },
+    response,
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(queries.length, 4);
+  assert.equal(response.body.authorizationMode, "public-search");
+  assert.equal(response.body.displayName, "示例作者");
+  assert.equal(response.body.totalCount, 1);
+  assert.equal(response.body.items.length, 1);
+  assert.deepEqual(response.body.items[0], {
+    id: "Answer:1",
+    contentType: "answer",
+    url: "https://www.zhihu.com/question/1/answer/1",
+    createdAt: 1745486539,
+    likeCount: 88,
+    commentCount: 9,
+    favoriteCount: 0,
+    title: "创作者的代表回答",
+    summary: "这是公开搜索返回的内容摘要。",
+  });
+
+  globalThis.fetch = originalFetch;
+  if (originalSecret === undefined) {
+    delete process.env.ZHIHU_ACCESS_SECRET;
+  } else {
+    process.env.ZHIHU_ACCESS_SECRET = originalSecret;
+  }
+});
+
 test("profile endpoint merges recent and popular public content", async () => {
   const originalSecret = process.env.ZHIHU_ACCESS_SECRET;
   const originalFetch = globalThis.fetch;

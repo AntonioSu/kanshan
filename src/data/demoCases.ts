@@ -1,4 +1,4 @@
-import type { ZhihuEvidence } from "../types";
+import type { ProfileAnalysisScope, ZhihuEvidence } from "../types";
 
 export const demoEvidence: ZhihuEvidence[] = [
   {
@@ -75,16 +75,21 @@ export function createLabSteps(isLiveData: boolean) {
   ];
 }
 
-export function createProfileLabSteps(isLiveData: boolean) {
+export function createProfileLabSteps(isLiveData: boolean, scope: ProfileAnalysisScope) {
+  const isPublic = scope === "public";
   return [
     {
-      title: "验证授权主页",
-      detail: "确认主页格式，并限定为当前已授权的知乎账号。",
+      title: isPublic ? "验证公开主页" : "验证授权主页",
+      detail: isPublic
+        ? "确认主页格式与显示昵称，避免把同名内容归给目标作者。"
+        : "确认主页格式，并使用当前 Access Secret 所属账号。",
     },
     {
-      title: "获取公开创作",
+      title: isPublic ? "检索公开创作" : "获取公开创作",
       detail: isLiveData
-        ? "调用知乎用户内容 API，同时获取近期与高赞内容。"
+        ? isPublic
+          ? "调用知乎搜索 API，执行回答、文章、创作等多组检索。"
+          : "调用知乎用户内容 API，同时获取近期与高赞内容。"
         : "读取主页分析演示样本。",
     },
     {
