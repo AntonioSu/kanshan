@@ -12,7 +12,7 @@ import type {
   ZhihuEvidence,
 } from "../types";
 
-type EffortCategory = "creator" | "job" | "fitness" | "learning";
+type EffortCategory = "creator" | "job" | "workplace" | "fitness" | "learning";
 
 type LiveZhihuItem = {
   id: string;
@@ -184,6 +184,26 @@ function buildSharpInsights(
     ];
   }
 
+  if (category === "workplace") {
+    return [
+      {
+        title: "忙到不可替代，可能正是你无法晋升的原因。",
+        detail: `${sampleLabel}揭示的是角色陷阱：团队越依赖你处理琐事和救火，越难把你从执行位移到更高杠杆的位置。`,
+        action: "列出本周所有任务，只保留一项能形成长期成果的核心责任。",
+      },
+      {
+        title: "领导能看见你的辛苦，不等于组织能归因你的价值。",
+        detail: "响应快和加班多证明可靠，但晋升通常需要可归属、可量化、可复用的业务结果。",
+        action: "把最近一个项目写成：我做了什么、改变了哪个指标、影响了谁。",
+      },
+      {
+        title: "救火能力会带来更多火，不会自动带来更高职级。",
+        detail: "每次临时补位都在奖励系统继续把应急工作分给你，同时挤压真正能建立晋升证据的时间。",
+        action: "下一次接临时任务前，先和领导确认它替代了哪项既定优先级。",
+      },
+    ];
+  }
+
   if (category === "fitness") {
     return [
       {
@@ -343,6 +363,43 @@ const mechanismRules: Record<EffortCategory, MechanismRule[]> = {
       recommendation: "用三种渠道投递同类岗位，比较有效回复成本。",
     },
   ],
+  workplace: [
+    {
+      id: "reactive-work",
+      title: "响应型工作吞噬核心产出",
+      detail: "临时需求、协调与救火占据主要时间，却很少沉淀为个人负责的长期成果。",
+      keywords: ["临时", "救火", "协调", "响应", "琐事", "支持", "配合"],
+      recommendation: "记录一周响应型工作占比，并为核心项目预留不可被临时占用的时间。",
+    },
+    {
+      id: "invisible-value",
+      title: "价值没有形成可归因证据",
+      detail: "工作被描述成辛苦和支持，缺少个人动作、业务指标与影响范围。",
+      keywords: ["汇报", "成果", "绩效", "量化", "指标", "贡献", "转化"],
+      recommendation: "把每项成果改写为个人动作、指标变化和组织影响。",
+    },
+    {
+      id: "promotion-ambiguity",
+      title: "晋升标准长期模糊",
+      detail: "只收到“多承担”之类抽象反馈，没有明确职级差距和验收标准。",
+      keywords: ["晋升", "职级", "标准", "承担", "反馈", "预期", "责任"],
+      recommendation: "与直属领导确认三个可验收的晋升条件、证据形式和复盘时间。",
+    },
+    {
+      id: "low-leverage",
+      title: "工作杠杆没有提升",
+      detail: "大量重复执行没有转化为流程、方法、工具或可复制机制。",
+      keywords: ["重复", "流程", "方法", "工具", "自动化", "沉淀", "复用"],
+      recommendation: "把一个高频任务沉淀为模板或流程，并记录节省的团队时间。",
+    },
+    {
+      id: "boundary-erosion",
+      title: "即时响应侵蚀工作边界",
+      detail: "随叫随到让所有任务都显得紧急，个人优先级被他人需求持续重排。",
+      keywords: ["加班", "随时", "消息", "拒绝", "边界", "优先级", "回复"],
+      recommendation: "接新任务时明确截止时间、优先级，以及它将替代的既有任务。",
+    },
+  ],
   fitness: [
     {
       id: "untracked-variables",
@@ -477,6 +534,12 @@ const causalChains: Record<EffortCategory, CausalStep[]> = {
     { stage: "可见结果", title: "投递量上升，回复率不变", detail: "动作数量掩盖了匹配问题。" },
     { stage: "破局变量", title: "分组验证匹配", detail: "按岗位族改写简历并比较回复率。" },
   ],
+  workplace: [
+    { stage: "表层动作", title: "继续接活并延长在线时间", detail: "用更快响应证明可靠和责任心。" },
+    { stage: "隐藏机制", title: "核心成果被响应工作挤压", detail: "时间被切碎，价值停留在支持与救火。" },
+    { stage: "可见结果", title: "团队依赖你，却无法为你晋升", detail: "辛苦可见，但职级所需的结果证据不足。" },
+    { stage: "破局变量", title: "把努力变成可归因资产", detail: "对齐标准、主导结果、量化影响并沉淀机制。" },
+  ],
   fitness: [
     { stage: "表层动作", title: "继续增加训练次数", detail: "把变化慢归因于练得不够多。" },
     { stage: "隐藏机制", title: "关键变量不可追踪", detail: "强度、饮食、恢复和计划同时变化。" },
@@ -500,6 +563,11 @@ const priorityActions: Record<EffortCategory, PriorityAction[]> = {
     { priority: "P0", title: "按岗位族重写简历", reason: "直接提升岗位匹配信号。", metric: "有效回复率", firstStep: "选择三个岗位族并各做一版简历。" },
     { priority: "P1", title: "建立投递漏斗", reason: "定位问题发生在哪个阶段。", metric: "投递到面试转化", firstStep: "补录最近 30 次投递的阶段结果。" },
     { priority: "P2", title: "扩展求职渠道", reason: "降低单一平台的流量偏差。", metric: "各渠道回复成本", firstStep: "增加内推和直接联系两种渠道。" },
+  ],
+  workplace: [
+    { priority: "P0", title: "对齐晋升证据", reason: "先确认组织真正认可什么结果。", metric: "明确可验收条件数", firstStep: "约一次 30 分钟沟通，确认三个晋升条件和复盘日期。" },
+    { priority: "P1", title: "建立个人成果账本", reason: "让价值可以被归因、比较和复述。", metric: "量化成果条目数", firstStep: "补写最近三个项目的个人动作、指标变化和影响范围。" },
+    { priority: "P2", title: "降低响应型工作占比", reason: "为核心项目释放连续时间。", metric: "核心项目时间占比", firstStep: "记录一周临时任务，并与领导确认一项可停止或移交的工作。" },
   ],
   fitness: [
     { priority: "P0", title: "记录关键训练变量", reason: "没有记录就无法判断有效动作。", metric: "有效训练量", firstStep: "从下一次训练记录重量、次数和动作标准。" },
@@ -527,15 +595,28 @@ export async function analyzeEffortPainPoint(
 ): Promise<AntiRollReport> {
   const rawEvidence = await provider.searchSimilarCases(query);
   const lowerQuery = query.toLowerCase();
-  const isCreator = lowerQuery.includes("公众号") || lowerQuery.includes("写") || lowerQuery.includes("内容");
+  const isCreator = ["公众号", "写作", "创作", "文章", "日更", "发布", "读者", "选题"].some(
+    (keyword) => lowerQuery.includes(keyword),
+  );
   const isJob = lowerQuery.includes("简历") || lowerQuery.includes("投递") || lowerQuery.includes("面试");
+  const isWorkplace = ["职场", "晋升", "加班", "领导", "绩效", "救火"].some((keyword) =>
+    lowerQuery.includes(keyword),
+  );
   const isFitness = lowerQuery.includes("运动") || lowerQuery.includes("健身");
   const evidence = rawEvidence.map((item) => ({
     ...item,
     effortPattern: condenseExcerpt(item.effortPattern),
     insight: item.insight || deriveEvidenceInsight(item.effortPattern, query),
   }));
-  const category = isCreator ? "creator" : isJob ? "job" : isFitness ? "fitness" : "learning";
+  const category = isCreator
+    ? "creator"
+    : isJob
+      ? "job"
+      : isWorkplace
+        ? "workplace"
+        : isFitness
+          ? "fitness"
+          : "learning";
   const evidenceOverview = buildEvidenceOverview(evidence);
   const mechanisms = buildMechanisms(category, rawEvidence);
 
@@ -543,13 +624,15 @@ export async function analyzeEffortPainPoint(
     ? "内容创作增长问题"
     : isJob
       ? "求职匹配效率问题"
-      : isFitness
-        ? "训练反馈管理问题"
-        : "学习与成长效率问题";
+      : isWorkplace
+        ? "职场价值与晋升问题"
+        : isFitness
+          ? "训练反馈管理问题"
+          : "学习与成长效率问题";
 
-  const effortScore = isCreator ? 86 : isJob ? 82 : 88;
-  const directionScore = isCreator ? 52 : isJob ? 48 : 56;
-  const feedbackScore = isCreator ? 41 : isJob ? 45 : 38;
+  const effortScore = isCreator ? 86 : isJob ? 82 : isWorkplace ? 91 : 88;
+  const directionScore = isCreator ? 52 : isJob ? 48 : isWorkplace ? 44 : 56;
+  const feedbackScore = isCreator ? 41 : isJob ? 45 : isWorkplace ? 35 : 38;
   const antiRollScore = Math.round((directionScore + feedbackScore + 100 - Math.abs(effortScore - 72)) / 3);
 
   return {
@@ -561,27 +644,31 @@ export async function analyzeEffortPainPoint(
       ? "你不是更新太少，而是缺少反馈循环。"
       : isJob
         ? "你不是投得不够多，而是岗位匹配没有被验证。"
-        : isFitness
-          ? "你不是练得太少，而是关键变量没有被记录。"
-          : "你不是不努力，而是在重复低反馈行为。",
+        : isWorkplace
+          ? "你不是承担得不够多，而是努力没有转化成可归因的晋升证据。"
+          : isFitness
+            ? "你不是练得太少，而是关键变量没有被记录。"
+            : "你不是不努力，而是在重复低反馈行为。",
     effortScore,
     directionScore,
     feedbackScore,
     antiRollScore,
     evidenceCount: evidence.length,
-    successPattern: [
-      "把大目标拆成可验证假设",
-      "每周复盘一次数据或反馈",
-      "只放大已经被证明有效的动作",
-    ],
-    failurePattern: [
-      "用时长证明努力，缺少结果指标",
-      "只增加数量，不改变方法",
-      "没有对失败样本做原因归档",
-    ],
-    stopDoing: ["继续堆时间", "用打卡替代复盘", "把所有失败归因于不够努力"],
-    startDoing: ["记录每次行动的反馈", "每周只测试一个变量", "把成功样本拆成可模仿动作"],
-    oneWeekExperiment: ["第 1 天：写下当前目标和可衡量结果", "第 3 天：对照 3 个相似案例找差异", "第 7 天：保留有效动作，停止最低收益动作"],
+    successPattern: isWorkplace
+      ? ["主动对齐职级标准和验收证据", "主导可量化的核心业务结果", "把重复执行沉淀为可复用机制"]
+      : ["把大目标拆成可验证假设", "每周复盘一次数据或反馈", "只放大已经被证明有效的动作"],
+    failurePattern: isWorkplace
+      ? ["用在线时长证明投入，缺少归因", "被临时需求持续重排优先级", "只听到抽象评价，没有晋升标准"]
+      : ["用时长证明努力，缺少结果指标", "只增加数量，不改变方法", "没有对失败样本做原因归档"],
+    stopDoing: isWorkplace
+      ? ["无条件接下所有临时任务", "用即时回复证明责任心", "等待领导自动发现贡献"]
+      : ["继续堆时间", "用打卡替代复盘", "把所有失败归因于不够努力"],
+    startDoing: isWorkplace
+      ? ["对齐三个晋升验收条件", "记录个人动作和业务指标", "每周保护一个核心项目时间块"]
+      : ["记录每次行动的反馈", "每周只测试一个变量", "把成功样本拆成可模仿动作"],
+    oneWeekExperiment: isWorkplace
+      ? ["第 1 天：统计响应型工作占比", "第 3 天：与领导确认晋升证据", "第 7 天：提交一页成果与优先级复盘"]
+      : ["第 1 天：写下当前目标和可衡量结果", "第 3 天：对照 3 个相似案例找差异", "第 7 天：保留有效动作，停止最低收益动作"],
     sharpInsights: buildSharpInsights(category, evidence),
     evidenceOverview,
     mechanisms,
