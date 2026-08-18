@@ -30,6 +30,57 @@ export type SharpInsight = {
   action: string;
 };
 
+export type EvidenceOverview = {
+  sampleCount: number;
+  authorCount: number;
+  contentTypeCount: number;
+  totalVotes: number;
+  totalComments: number;
+  averageVotes: number;
+  topResultVoteShare: number;
+};
+
+export type MechanismAnalysis = {
+  id: string;
+  title: string;
+  detail: string;
+  sampleCount: number;
+  sampleShare: number;
+  engagement: number;
+  engagementShare: number;
+  recommendation: string;
+  basis: "observed" | "hypothesis";
+};
+
+export type DiagnosticDimension = {
+  dimension: string;
+  riskScore: number;
+  level: "高风险" | "需关注" | "待验证";
+  finding: string;
+  validation: string;
+};
+
+export type CausalStep = {
+  stage: string;
+  title: string;
+  detail: string;
+};
+
+export type PriorityAction = {
+  priority: "P0" | "P1" | "P2";
+  title: string;
+  reason: string;
+  metric: string;
+  firstStep: string;
+};
+
+export type SevenDayStep = {
+  day: string;
+  title: string;
+  task: string;
+  output: string;
+};
+
 export type AntiRollReport = {
   kind: "effort";
   query: string;
@@ -47,6 +98,12 @@ export type AntiRollReport = {
   startDoing: string[];
   oneWeekExperiment: string[];
   sharpInsights: SharpInsight[];
+  evidenceOverview: EvidenceOverview;
+  mechanisms: MechanismAnalysis[];
+  diagnosticMatrix: DiagnosticDimension[];
+  causalChain: CausalStep[];
+  priorityActions: PriorityAction[];
+  sevenDayPlan: SevenDayStep[];
   evidence: ZhihuEvidence[];
 };
 

@@ -1,5 +1,18 @@
 import { demoEvidence } from "../data/demoCases";
-import type { AntiRollReport, ReportDataSource, SharpInsight, ZhihuEvidence } from "../types";
+import type {
+  AntiRollReport,
+  CausalStep,
+  DiagnosticDimension,
+  EvidenceOverview,
+  MechanismAnalysis,
+  PriorityAction,
+  ReportDataSource,
+  SevenDayStep,
+  SharpInsight,
+  ZhihuEvidence,
+} from "../types";
+
+type EffortCategory = "creator" | "job" | "fitness" | "learning";
 
 type LiveZhihuItem = {
   id: string;
@@ -44,7 +57,7 @@ export class ApiZhihuProvider implements ZhihuSearchProvider {
     const response = await fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, count: 6 }),
+      body: JSON.stringify({ query, count: 10 }),
     });
 
     const payload = (await response.json()) as LiveZhihuResponse & { error?: string };
@@ -126,7 +139,7 @@ function deriveEvidenceInsight(text: string, query: string) {
 }
 
 function buildSharpInsights(
-  category: "creator" | "job" | "fitness" | "learning",
+  category: EffortCategory,
   evidence: ZhihuEvidence[],
 ): SharpInsight[] {
   const sampleLabel = evidence.length ? `${evidence.length} 条可追溯样本` : "相似样本";
@@ -210,6 +223,304 @@ function buildSharpInsights(
   ];
 }
 
+type MechanismRule = {
+  id: string;
+  title: string;
+  detail: string;
+  keywords: string[];
+  recommendation: string;
+};
+
+const mechanismRules: Record<EffortCategory, MechanismRule[]> = {
+  learning: [
+    {
+      id: "passive-input",
+      title: "输入挤占输出",
+      detail: "阅读、听课与整理带来熟悉感，但缺少闭卷提取和独立完成。",
+      keywords: ["输入", "输出", "听课", "网课", "阅读", "闭卷", "提取", "默写"],
+      recommendation: "把至少 30% 的学习时间改成脱离材料后的输出测试。",
+    },
+    {
+      id: "feedback-delay",
+      title: "反馈到达太晚",
+      detail: "错误没有被分类和回测，导致下一轮继续重复同一薄弱点。",
+      keywords: ["反馈", "错题", "复盘", "测试", "回忆", "漏洞", "总结"],
+      recommendation: "把反馈周期缩短到当天，并记录第一处卡点。",
+    },
+    {
+      id: "attention-fragmentation",
+      title: "注意力被切碎",
+      detail: "频繁切换任务让表面时长远高于真正的深度工作时间。",
+      keywords: ["手机", "切换", "注意力", "专注", "走神", "消息", "干扰"],
+      recommendation: "为高认知任务保留一个不切换应用的完整时间块。",
+    },
+    {
+      id: "comfort-zone",
+      title: "任务停留在舒适区",
+      detail: "重复熟悉内容能维持正确率，却无法暴露尚未掌握的能力。",
+      keywords: ["简单题", "熟悉", "舒适区", "难题", "挑战", "卡点"],
+      recommendation: "每天主动选择一项会失败的任务，并记录失败原因。",
+    },
+    {
+      id: "recovery-debt",
+      title: "恢复债务侵蚀效率",
+      detail: "熬夜和疲劳让后续学习时长的边际收益迅速下降。",
+      keywords: ["熬夜", "睡眠", "疲劳", "恢复", "无精打采", "休息"],
+      recommendation: "先稳定睡眠与高质量时段，再讨论是否增加学习量。",
+    },
+  ],
+  creator: [
+    {
+      id: "audience-blindness",
+      title: "选题脱离真实需求",
+      detail: "内容来自个人灵感，缺少搜索、评论和读者问题的验证。",
+      keywords: ["选题", "读者", "用户", "需求", "搜索", "评论"],
+      recommendation: "发布前用搜索量、评论问题或标题测试验证需求。",
+    },
+    {
+      id: "quantity-bias",
+      title: "数量偏见",
+      detail: "把更新频率当作增长变量，却没有确认当前方向是否有效。",
+      keywords: ["日更", "更新", "数量", "频率", "持续产出"],
+      recommendation: "停止加量，先比较不同主题的点击、收藏和关注转化。",
+    },
+    {
+      id: "weak-feedback",
+      title: "发布后没有复盘",
+      detail: "标题、开头、完读和互动没有被拆开分析，失败无法沉淀。",
+      keywords: ["复盘", "数据", "反馈", "标题", "点击", "完读"],
+      recommendation: "每周只复盘一个变量，并形成可复用的内容模板。",
+    },
+    {
+      id: "positioning-drift",
+      title: "账号主题漂移",
+      detail: "内容之间缺少稳定主题，用户无法形成清晰预期。",
+      keywords: ["定位", "垂直", "主题", "系列", "标签", "领域"],
+      recommendation: "连续三篇围绕同一问题族发布，验证系列效应。",
+    },
+    {
+      id: "distribution-gap",
+      title: "只创作、不分发",
+      detail: "内容完成后缺少渠道适配与二次传播设计。",
+      keywords: ["分发", "渠道", "传播", "推荐", "流量", "曝光"],
+      recommendation: "为同一内容准备三个渠道版本，并记录各自转化。",
+    },
+  ],
+  job: [
+    {
+      id: "generic-resume",
+      title: "同一份简历批量投递",
+      detail: "简历没有针对岗位重写，投递次数没有带来新信息。",
+      keywords: ["同一份", "批量", "海投", "简历", "投递"],
+      recommendation: "按岗位族制作不同版本，并分别记录回复率。",
+    },
+    {
+      id: "matching-gap",
+      title: "岗位匹配没有验证",
+      detail: "经历与 JD 的关键能力没有逐项对应。",
+      keywords: ["匹配", "岗位", "jd", "要求", "能力", "关键词"],
+      recommendation: "让每条经历对应一项岗位要求和一个结果证据。",
+    },
+    {
+      id: "weak-proof",
+      title: "成果证据不足",
+      detail: "描述停留在职责，缺少结果、规模与个人贡献。",
+      keywords: ["结果", "量化", "项目", "成果", "数据", "贡献"],
+      recommendation: "把职责句改写为动作、难点、结果和证据。",
+    },
+    {
+      id: "no-funnel",
+      title: "没有求职漏斗",
+      detail: "只记录投递量，没有比较回复、笔试和面试转化。",
+      keywords: ["回复率", "转化", "面试", "笔试", "漏斗", "记录"],
+      recommendation: "建立投递到 offer 的分阶段转化表，每 20 次复盘。",
+    },
+    {
+      id: "channel-concentration",
+      title: "渠道过于单一",
+      detail: "只依赖公开投递，缺少内推、社群和直接沟通。",
+      keywords: ["内推", "渠道", "招聘网站", "社群", "联系", "猎头"],
+      recommendation: "用三种渠道投递同类岗位，比较有效回复成本。",
+    },
+  ],
+  fitness: [
+    {
+      id: "untracked-variables",
+      title: "关键变量没有记录",
+      detail: "训练量、强度、饮食和恢复同时变化，结果无法归因。",
+      keywords: ["记录", "强度", "饮食", "恢复", "变量", "训练量"],
+      recommendation: "固定其他条件，每周只调整一个训练变量。",
+    },
+    {
+      id: "checkin-bias",
+      title: "打卡替代训练质量",
+      detail: "完成次数被当作结果，但动作质量和渐进负荷没有提升。",
+      keywords: ["打卡", "次数", "动作", "质量", "重量", "负荷"],
+      recommendation: "用重量、次数和动作标准记录有效训练量。",
+    },
+    {
+      id: "recovery-gap",
+      title: "恢复不足",
+      detail: "睡眠与休息无法支持当前训练刺激。",
+      keywords: ["睡眠", "恢复", "休息", "疲劳", "酸痛"],
+      recommendation: "为高强度训练安排固定恢复日，并记录表现变化。",
+    },
+    {
+      id: "nutrition-gap",
+      title: "营养与目标不匹配",
+      detail: "饮食没有围绕增肌、减脂或表现目标进行量化。",
+      keywords: ["蛋白质", "热量", "饮食", "营养", "增肌", "减脂"],
+      recommendation: "先连续记录七天热量与蛋白质，再调整训练量。",
+    },
+    {
+      id: "program-drift",
+      title: "计划变化过快",
+      detail: "训练动作和计划频繁切换，无法判断适应是否发生。",
+      keywords: ["计划", "更换", "动作", "周期", "坚持", "方案"],
+      recommendation: "保持核心计划四周，只根据记录做小幅调整。",
+    },
+  ],
+};
+
+function buildEvidenceOverview(evidence: ZhihuEvidence[]): EvidenceOverview {
+  const totalVotes = evidence.reduce((sum, item) => sum + (item.voteUpCount || 0), 0);
+  const totalComments = evidence.reduce((sum, item) => sum + (item.commentCount || 0), 0);
+  const topVotes = Math.max(0, ...evidence.map((item) => item.voteUpCount || 0));
+  const authors = new Set(evidence.map((item) => item.authorName).filter(Boolean));
+  const contentTypes = new Set(evidence.map((item) => item.tags[0]).filter(Boolean));
+
+  return {
+    sampleCount: evidence.length,
+    authorCount: authors.size || evidence.length,
+    contentTypeCount: contentTypes.size,
+    totalVotes,
+    totalComments,
+    averageVotes: evidence.length ? Math.round(totalVotes / evidence.length) : 0,
+    topResultVoteShare: totalVotes ? Math.round((topVotes / totalVotes) * 100) : 0,
+  };
+}
+
+function buildMechanisms(category: EffortCategory, evidence: ZhihuEvidence[]): MechanismAnalysis[] {
+  const totalEngagement = evidence.reduce(
+    (sum, item) => sum + (item.voteUpCount || 0) + (item.commentCount || 0) * 2,
+    0,
+  );
+
+  return mechanismRules[category]
+    .map((rule) => {
+      const matches = evidence.filter((item) => {
+        const text = `${item.title} ${item.effortPattern} ${item.insight || ""}`.toLowerCase();
+        return rule.keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+      });
+      const engagement = matches.reduce(
+        (sum, item) => sum + (item.voteUpCount || 0) + (item.commentCount || 0) * 2,
+        0,
+      );
+
+      return {
+        id: rule.id,
+        title: rule.title,
+        detail: rule.detail,
+        sampleCount: matches.length,
+        sampleShare: evidence.length ? Math.round((matches.length / evidence.length) * 100) : 0,
+        engagement,
+        engagementShare: totalEngagement ? Math.round((engagement / totalEngagement) * 100) : 0,
+        recommendation: rule.recommendation,
+        basis: matches.length ? ("observed" as const) : ("hypothesis" as const),
+      };
+    })
+    .sort((a, b) => {
+      if (a.basis !== b.basis) {
+        return a.basis === "observed" ? -1 : 1;
+      }
+      return b.sampleCount - a.sampleCount || b.engagement - a.engagement;
+    });
+}
+
+function buildDiagnosticMatrix(mechanisms: MechanismAnalysis[]): DiagnosticDimension[] {
+  return mechanisms.map((mechanism) => {
+    const riskScore =
+      mechanism.basis === "observed"
+        ? Math.min(95, Math.round(25 + mechanism.sampleShare * 0.55 + mechanism.engagementShare * 0.25))
+        : 25;
+    const level = riskScore >= 70 ? "高风险" : riskScore >= 45 ? "需关注" : "待验证";
+
+    return {
+      dimension: mechanism.title,
+      riskScore,
+      level,
+      finding:
+        mechanism.basis === "observed"
+          ? `${mechanism.sampleCount} 条样本出现该机制，样本出现率 ${mechanism.sampleShare}%，互动覆盖 ${mechanism.engagementShare}%。`
+          : "当前检索样本没有直接覆盖这一机制，仍需用个人记录验证。",
+      validation: mechanism.recommendation,
+    };
+  });
+}
+
+const causalChains: Record<EffortCategory, CausalStep[]> = {
+  learning: [
+    { stage: "表层动作", title: "继续增加学习时长", detail: "用更多输入缓解没有进步的焦虑。" },
+    { stage: "隐藏机制", title: "输出与反馈被挤压", detail: "能力漏洞没有在练习中及时暴露。" },
+    { stage: "可见结果", title: "熟悉感上升，成绩不动", detail: "主观努力感与客观表现逐渐分离。" },
+    { stage: "破局变量", title: "缩短反馈周期", detail: "先输出、再定位卡点、最后补充输入。" },
+  ],
+  creator: [
+    { stage: "表层动作", title: "继续提高更新频率", detail: "把低增长归因于内容数量不够。" },
+    { stage: "隐藏机制", title: "需求与反馈缺席", detail: "选题没有经过市场验证，发布后也不复盘。" },
+    { stage: "可见结果", title: "产出稳定，增长停滞", detail: "每篇内容都在重复同一种不确定性。" },
+    { stage: "破局变量", title: "建立选题实验", detail: "先验证需求，再写作，再复盘单一变量。" },
+  ],
+  job: [
+    { stage: "表层动作", title: "继续批量投递", detail: "把没有面试归因于投递数量不足。" },
+    { stage: "隐藏机制", title: "岗位匹配没有变化", detail: "同一份简历重复进入不同岗位漏斗。" },
+    { stage: "可见结果", title: "投递量上升，回复率不变", detail: "动作数量掩盖了匹配问题。" },
+    { stage: "破局变量", title: "分组验证匹配", detail: "按岗位族改写简历并比较回复率。" },
+  ],
+  fitness: [
+    { stage: "表层动作", title: "继续增加训练次数", detail: "把变化慢归因于练得不够多。" },
+    { stage: "隐藏机制", title: "关键变量不可追踪", detail: "强度、饮食、恢复和计划同时变化。" },
+    { stage: "可见结果", title: "打卡很多，身体变化不明", detail: "无法判断哪个动作真正有效。" },
+    { stage: "破局变量", title: "单变量训练实验", detail: "固定其他条件，每周只调整一个变量。" },
+  ],
+};
+
+const priorityActions: Record<EffortCategory, PriorityAction[]> = {
+  learning: [
+    { priority: "P0", title: "先输出，再输入", reason: "最快暴露真实知识漏洞。", metric: "闭卷正确率", firstStep: "明天第一小时完成一次闭卷测试。" },
+    { priority: "P1", title: "建立错因档案", reason: "把失败变成下一轮练习依据。", metric: "重复错误率", firstStep: "给每道错题标注知识、策略或粗心。" },
+    { priority: "P2", title: "保护高质量时段", reason: "降低注意力切换造成的隐性损耗。", metric: "完整专注块数量", firstStep: "每天预留一个 60 分钟无切换时段。" },
+  ],
+  creator: [
+    { priority: "P0", title: "验证选题需求", reason: "避免继续放大错误方向。", metric: "标题点击与收藏", firstStep: "为同一问题写三个标题并先收集反馈。" },
+    { priority: "P1", title: "拆解高反馈内容", reason: "找到可重复的主题与结构。", metric: "系列内容相对表现", firstStep: "复盘历史前三篇内容的共同点。" },
+    { priority: "P2", title: "固定复盘节奏", reason: "让每次发布产生下一次决策。", metric: "每周完成复盘次数", firstStep: "建立标题、开头、完读、互动四项记录。" },
+  ],
+  job: [
+    { priority: "P0", title: "按岗位族重写简历", reason: "直接提升岗位匹配信号。", metric: "有效回复率", firstStep: "选择三个岗位族并各做一版简历。" },
+    { priority: "P1", title: "建立投递漏斗", reason: "定位问题发生在哪个阶段。", metric: "投递到面试转化", firstStep: "补录最近 30 次投递的阶段结果。" },
+    { priority: "P2", title: "扩展求职渠道", reason: "降低单一平台的流量偏差。", metric: "各渠道回复成本", firstStep: "增加内推和直接联系两种渠道。" },
+  ],
+  fitness: [
+    { priority: "P0", title: "记录关键训练变量", reason: "没有记录就无法判断有效动作。", metric: "有效训练量", firstStep: "从下一次训练记录重量、次数和动作标准。" },
+    { priority: "P1", title: "固定恢复条件", reason: "避免疲劳掩盖训练效果。", metric: "睡眠与表现变化", firstStep: "连续七天固定睡眠窗口。" },
+    { priority: "P2", title: "一次只改一个变量", reason: "让结果可以归因。", metric: "单变量周变化", firstStep: "本周只调整训练强度，不改饮食和动作。" },
+  ],
+};
+
+function buildSevenDayPlan(category: EffortCategory): SevenDayStep[] {
+  const action = priorityActions[category][0];
+  return [
+    { day: "D1", title: "建立基线", task: "记录当前动作、结果和最常见失败。", output: "一页现状快照" },
+    { day: "D2", title: "停止加量", task: "保持投入不变，只移除一个最低收益动作。", output: "停止清单" },
+    { day: "D3", title: "执行 P0", task: action.firstStep, output: action.metric },
+    { day: "D4", title: "收集反馈", task: "记录卡点、结果和意外信号，不急着下结论。", output: "反馈日志" },
+    { day: "D5", title: "重复验证", task: "在相似场景重复同一动作，确认结果能否复现。", output: "第二次样本" },
+    { day: "D6", title: "比较差异", task: "对比基线与两次实验，找出最可能的有效变量。", output: "差异表" },
+    { day: "D7", title: "做出决策", task: "保留有效动作，停止无效动作，并设定下一周指标。", output: "下一轮实验卡" },
+  ];
+}
+
 export async function analyzeEffortPainPoint(
   query: string,
   provider: ZhihuSearchProvider = createDefaultProvider(),
@@ -225,6 +536,8 @@ export async function analyzeEffortPainPoint(
     insight: item.insight || deriveEvidenceInsight(item.effortPattern, query),
   }));
   const category = isCreator ? "creator" : isJob ? "job" : isFitness ? "fitness" : "learning";
+  const evidenceOverview = buildEvidenceOverview(evidence);
+  const mechanisms = buildMechanisms(category, rawEvidence);
 
   const objectType = isCreator
     ? "内容创作增长问题"
@@ -270,6 +583,12 @@ export async function analyzeEffortPainPoint(
     startDoing: ["记录每次行动的反馈", "每周只测试一个变量", "把成功样本拆成可模仿动作"],
     oneWeekExperiment: ["第 1 天：写下当前目标和可衡量结果", "第 3 天：对照 3 个相似案例找差异", "第 7 天：保留有效动作，停止最低收益动作"],
     sharpInsights: buildSharpInsights(category, evidence),
+    evidenceOverview,
+    mechanisms,
+    diagnosticMatrix: buildDiagnosticMatrix(mechanisms),
+    causalChain: causalChains[category],
+    priorityActions: priorityActions[category],
+    sevenDayPlan: buildSevenDayPlan(category),
     evidence,
   };
 }

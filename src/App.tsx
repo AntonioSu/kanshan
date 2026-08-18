@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
-  BarChart3,
   BrainCircuit,
   ClipboardList,
   FileSearch,
@@ -18,11 +16,10 @@ import {
 } from "lucide-react";
 import { analyzeZhihuProfile, isLiveZhihuProfileConfigured, parseZhihuProfileUrl } from "./api/profile";
 import { analyzeEffortPainPoint, isLiveZhihuConfigured } from "./api/zhihu";
-import { EvidenceCard } from "./components/EvidenceCard";
+import { EffortReportView } from "./components/EffortReportView";
 import { KanshanMascot } from "./components/KanshanMascot";
 import { LabTimeline } from "./components/LabTimeline";
 import { ProfileReportView } from "./components/ProfileReportView";
-import { ScoreMeter } from "./components/ScoreMeter";
 import { createLabSteps, createProfileLabSteps } from "./data/demoCases";
 import type { AnalysisMode, AnalysisReport, StageId } from "./types";
 
@@ -333,109 +330,7 @@ export default function App() {
       )}
 
       {stage === "report" && report?.kind === "effort" && (
-        <section className="report-section">
-          <div className="section-heading">
-            <span>
-              <BarChart3 size={20} />
-              实验报告
-            </span>
-            <h2>努力尸检报告</h2>
-            <p>{report.query}</p>
-          </div>
-
-          <div className="report-grid">
-            <div className="diagnosis-panel">
-              <span className="panel-label">实验对象</span>
-              <h3>{report.objectType}</h3>
-              <blockquote>{report.coreDiagnosis}</blockquote>
-              <div className="score-stack">
-                <ScoreMeter label="努力指数" value={report.effortScore} tone="effort" />
-                <ScoreMeter label="方向匹配" value={report.directionScore} tone="direction" />
-                <ScoreMeter label="反馈强度" value={report.feedbackScore} tone="feedback" />
-                <ScoreMeter label="反卷指数" value={report.antiRollScore} tone="anti" />
-              </div>
-            </div>
-
-            <div className="pattern-panel">
-              <div>
-                <span className="panel-label">成功样本共同动作</span>
-                <ul>
-                  {report.successPattern.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <span className="panel-label">低收益样本共同问题</span>
-                <ul>
-                  {report.failurePattern.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="advice-panel">
-              <div>
-                <span className="panel-label">停止</span>
-                {report.stopDoing.map((item) => (
-                  <p key={item}>{item}</p>
-                ))}
-              </div>
-              <div>
-                <span className="panel-label">开始</span>
-                {report.startDoing.map((item) => (
-                  <p key={item}>{item}</p>
-                ))}
-              </div>
-              <div>
-                <span className="panel-label">一周实验</span>
-                {report.oneWeekExperiment.map((item) => (
-                  <p key={item}>{item}</p>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <section className="sharp-insights-section">
-            <div className="sharp-insights-heading">
-              <span className="panel-label">看山的反常识结论</span>
-              <h3>真正的问题，不在你以为的地方</h3>
-            </div>
-            <div className="sharp-insights-grid">
-              {report.sharpInsights.map((insight, index) => (
-                <article key={insight.title}>
-                  <span className="sharp-insight-index">0{index + 1}</span>
-                  <h4>{insight.title}</h4>
-                  <p>{insight.detail}</p>
-                  <div>
-                    <strong>立刻验证</strong>
-                    <span>{insight.action}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <div className="evidence-section">
-            <div className="evidence-section__heading">
-              <span className={`source-badge source-badge--${report.dataSource}`}>
-                {report.dataSource === "live"
-                  ? `${report.evidenceCount} 条可追溯知乎证据`
-                  : `${report.evidenceCount} 个演示证据样本`}
-              </span>
-              <button className="ghost-button" onClick={() => setStage("lab")} type="button">
-                <ArrowLeft size={18} />
-                回看流程
-              </button>
-            </div>
-            <div className="evidence-grid">
-              {report.evidence.slice(0, 3).map((item) => (
-                <EvidenceCard evidence={item} key={item.id} />
-              ))}
-            </div>
-          </div>
-        </section>
+        <EffortReportView report={report} onBack={() => setStage("lab")} />
       )}
     </main>
   );
